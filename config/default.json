@@ -1,0 +1,12 @@
+{
+  "port": 8080,
+  "proxyUrls": [],
+  "scylladb": {
+    "username": "",
+    "password": "",
+    "localDataCenter": "datacenter1",
+    "contactPoints": [
+      "127.0.0.1:9042"
+    ]
+  }
+}
