@@ -25,7 +25,7 @@ export enum LogLevel {
   Debug = 'debug',
 }
 
-export function createLog(start: number = Date.now(), level: LogLevel = LogLevel.Info,  msg: string = ''): Log {
+export function createLog (start: number = Date.now(), level: LogLevel = LogLevel.Info, msg: string = ''): Log {
   const log: Log = Object.create(null)
   log.level = level
   log.start = start
@@ -33,17 +33,18 @@ export function createLog(start: number = Date.now(), level: LogLevel = LogLevel
   return log
 }
 
-export function writeLog(log: Log): void {
+export function writeLog (log: Log): void {
   switch (log.level) {
-  case LogLevel.Info, LogLevel.Debug:
-    stdout.write(JSON.stringify(log) + '\n')
-    break
-  default:
-    stderr.write(JSON.stringify(log) + '\n')
+    case LogLevel.Info:
+    case LogLevel.Debug:
+      stdout.write(JSON.stringify(log) + '\n')
+      break
+    default:
+      stderr.write(JSON.stringify(log) + '\n')
   }
 }
 
-export function logError(err: Error): void {
+export function logError (err: Error): void {
   const log = createLog(Date.now(), LogLevel.Error, err.message)
   Object.assign(log, err)
   writeLog(log)

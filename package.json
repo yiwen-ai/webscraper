@@ -10,6 +10,8 @@
     "start:prod": "node dist/main.js",
     "start:dev": "ts-node-esm -T src/main.ts",
     "build": "rm -rf dist && tsc",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -81,7 +83,13 @@
     "@types/koa": "^2.13.6",
     "@types/koa__router": "^12.0.0",
     "@types/node": "^18.15.0",
+    "@typescript-eslint/eslint-plugin": "^5.43.0",
+    "eslint": "^8.41.0",
+    "eslint-config-standard-with-typescript": "^34.0.1",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-n": "^15.0.0",
+    "eslint-plugin-promise": "^6.0.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.2"
   }
 }

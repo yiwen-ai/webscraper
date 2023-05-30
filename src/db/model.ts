@@ -1,18 +1,19 @@
-const {
-  createHash,
-} = await import('node:crypto')
 import { Buffer } from 'node:buffer'
 
-import { types, Client } from 'cassandra-driver'
+import { types, type Client } from 'cassandra-driver'
 import Long from 'long'
 import { Request } from '@crawlee/core'
 import { encode } from 'cbor-x'
+const {
+  createHash
+} = await import('node:crypto')
 
 const MAX_CELL_SIZE = 1024 * 1024 - 1 // 1MB
 
-// @ts-ignore
+// @ts-expect-error: should ignore
 if (BigInt.prototype.toJSON == null) {
-  // @ts-ignore
+  /* eslint no-extend-native: ["error", { "exceptions": ["BigInt"] }] */
+  // @ts-expect-error: should ignore
   BigInt.prototype.toJSON = function () {
     return this.toString()
   }
@@ -32,30 +33,30 @@ interface CounterRow {
 
 export interface CounterJSON {
   key: string
-  cnt: BigInt
+  cnt: bigint
 }
 
 export class Counter {
   row: CounterRow
 
-  constructor(key: string) {
+  constructor (key: string) {
     this.row = Object.create(null)
     this.row.key = key
     this.row.cnt = types.Long.fromInt(0)
   }
 
-  toJSON(): CounterJSON {
+  toJSON (): CounterJSON {
     return {
       key: this.row.key,
-      cnt: BigInt(this.row.cnt.toString()),
+      cnt: BigInt(this.row.cnt.toString())
     }
   }
 
-  async fill(cli: Client) {
+  async fill (cli: Client): Promise<void> {
     const query = 'SELECT cnt FROM cnt WHERE key=? LIMIT 1'
     const params = [this.row.key]
 
-    const result = await cli.execute(query, params, {prepare: true})
+    const result = await cli.execute(query, params, { prepare: true })
     const row = result.first()
     if (row == null) {
       throw new Error(`Counter ${this.row.key} not found`)
@@ -64,18 +65,16 @@ export class Counter {
     this.row.cnt = row.get('cnt')
   }
 
-  async incrOne(cli: Client) {
+  async incrOne (cli: Client): Promise<void> {
     const query = 'UPDATE cnt SET cnt=cnt+1 WHERE key=?'
     const params = [this.row.key]
 
-    await cli.execute(query, params, {prepare: true})
+    await cli.execute(query, params, { prepare: true })
   }
 
-  static get tableName() {
-    return 'cnt'
-  }
+  static readonly tableName = 'cnt'
 
-  static get columns() {
+  static get columns (): string[] {
     return ['key', 'cnt']
   }
 }
@@ -91,9 +90,7 @@ export class Counter {
 // html  TEXT,       # document content in html format
 // page  TEXT,       # full page content in html format
 
-export interface Meta {
-  [index: string]: string
-}
+export type Meta = Record<string, string>
 
 interface DocumentRow {
   oid: Buffer
@@ -109,7 +106,7 @@ interface DocumentRow {
 
 export interface DocumentJSON {
   oid: Buffer
-  at: BigInt
+  at: bigint
   url: string
   src: string
   title: string
@@ -123,12 +120,12 @@ export class Document {
   id: Buffer
   row: DocumentRow
 
-  static fromUrl(url: string) {
+  static fromUrl (url: string): Document {
     const doc = new Document()
-    const req = new Request({url: url})
+    const req = new Request({ url })
 
     sha1(req.uniqueKey).copy(doc.id)
-    doc.row.at = types.Long.fromInt(Math.floor(Date.now()/1000))
+    doc.row.at = types.Long.fromInt(Math.floor(Date.now() / 1000))
     doc.row.url = req.uniqueKey
     doc.row.src = url
     doc._fillAt()
@@ -136,19 +133,19 @@ export class Document {
     return doc
   }
 
-  static fromId(id: Buffer) {
+  static fromId (id: Buffer): Document {
     const doc = new Document()
     id.copy(doc.id)
     const bytes = new Array<number>(8)
     for (let i = 0; i < 8; i++) {
-      bytes[i] = doc.id[20+i]
+      bytes[i] = doc.id[20 + i]
     }
     // types.Long is a old version of Long
     doc.row.at = types.Long.fromValue(Long.fromBytesBE(bytes))
     return doc
   }
 
-  constructor() {
+  constructor () {
     this.id = Buffer.alloc(28)
     this.row = Object.create(null)
 
@@ -163,71 +160,75 @@ export class Document {
     this.row.page = ''
   }
 
-  get isFresh(): boolean {
-    return this.row.title != '' && this.row.at.gt(Math.floor(Date.now()/1000) -3600)
+  get isFresh (): boolean {
+    return this.row.title !== '' && this.row.at.gt(Math.floor(Date.now() / 1000) - 3600)
   }
 
-  toJSON(): DocumentJSON {
+  toJSON (): DocumentJSON {
     return {
       oid: this.row.oid,
       at: BigInt(this.row.at.toString()),
       url: this.row.url,
       src: this.row.src,
       title: this.row.title,
-      meta: this.row.meta || {},
+      meta: this.row.meta,
       cbor: this.row.cbor,
       html: this.row.html,
-      page: this.row.page,
+      page: this.row.page
     }
   }
 
-  setTitle(str: string) {
-    if (str.indexOf('\n') >= 0) {
+  setTitle (str: string): void {
+    if (str.includes('\n')) {
       str = str.replace(/\n/g, ' ')
     }
     this.row.title = str.trim()
   }
 
-  setMeta(meta: Meta) {
-    if (meta != null && typeof meta == 'object') {
+  setMeta (meta: Meta): void {
+    if (meta != null && typeof meta === 'object') {
       this.row.meta = meta
     }
   }
 
-  setCBOR(json: Object) {
+  setCBOR (json: any): void {
     this.row.cbor = encode(json)
   }
 
-  setHTML(str: string) {
+  setHTML (str: string): void {
     this.row.html = str.trim()
   }
 
-  setPage(str: string) {
+  setPage (str: string): void {
     this.row.page = str.trim()
   }
 
-  _fillAt() {
+  _fillAt (): void {
     const bytes = Long.fromValue(this.row.at).toBytesBE()
     for (let i = 0; i < 8; i++) {
-      this.id[20+i] = bytes[i]
+      this.id[20 + i] = bytes[i]
     }
   }
 
-  async fill(cli: Client, selectColumns: string[] = ['url', 'src', 'title', 'meta', 'cbor', 'html', 'page']) {
+  async fill (cli: Client, selectColumns: string[] = ['url', 'src', 'title', 'meta', 'cbor', 'html', 'page']): Promise<void> {
     const query = `SELECT ${selectColumns.join(',')} FROM doc WHERE oid=? AND at=? LIMIT 1`
     const params = [this.row.oid, this.row.at] // find the document in a hour.
 
-    const result = await cli.execute(query, params, {prepare: true})
+    const result = await cli.execute(query, params, { prepare: true })
     const row = result.first()
     if (row == null) {
-      throw new Error(`Document ${this.row.src || this.id.toString('base64url')} at ${this.row.at.toString()} not found`)
+      const name = this.row.src !== '' ? this.row.src : this.id.toString('base64url')
+      throw new Error(`Document ${name} at ${this.row.at.toString()} not found`)
     }
 
-    // @ts-ignore
-    row.forEach((value, name) => this.row[name] = value)
+    // @ts-expect-error: should ignore
+    row.forEach((value, name) => {
+      // @ts-expect-error: should ignore
+      this.row[name] = value
+    })
   }
 
-  async insert(cli: Client) {
+  async insert (cli: Client): Promise<void> {
     if (this.row.cbor == null) {
       throw new Error('Document cbor is null')
     }
@@ -238,19 +239,19 @@ export class Document {
 
     const columns = Document.columns
     const query = `INSERT INTO doc (${columns.join(',')}) VALUES (${columns.map((c) => '?').join(',')}) IF NOT EXISTS`
-    // @ts-ignore
+    // @ts-expect-error: should ignore
     const params = columns.map((c) => this.row[c])
 
-    await cli.execute(query, params, {prepare: true})
+    await cli.execute(query, params, { prepare: true })
   }
 
-  static async findLatest(cli: Client, url: string) {
+  static async findLatest (cli: Client, url: string): Promise<Document> {
     const doc = Document.fromUrl(url)
 
     const query = 'SELECT at,title FROM doc WHERE oid=? LIMIT 1'
     const params = [doc.row.oid]
 
-    const result = await cli.execute(query, params, {prepare: true})
+    const result = await cli.execute(query, params, { prepare: true })
     const row = result.first()
     if (row != null) {
       doc.row.at = row.get('at')
@@ -260,16 +261,14 @@ export class Document {
     return doc
   }
 
-  static get tableName() {
-    return 'art'
-  }
+  static readonly tableName = 'art'
 
-  static get columns() {
+  static get columns (): string[] {
     return ['oid', 'at', 'url', 'src', 'title', 'meta', 'cbor', 'html', 'page']
   }
 }
 
-function sha1(str: string) {
+function sha1 (str: string): Buffer {
   const hash = createHash('sha1')
   hash.update(str, 'utf8')
   return hash.digest()

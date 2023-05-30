@@ -1,7 +1,6 @@
-import { URL } from 'node:url'
 import { format } from 'node:util'
 
-import { Context } from 'koa'
+import { type Context } from 'koa'
 
 import { LogLevel, createLog, logError, writeLog } from './log.js'
 import { scraping } from './crawler.js'
@@ -10,15 +9,15 @@ import { Counter, Document } from './db/model.js'
 
 const serverStartAt = Date.now()
 
-export async function versionAPI(ctx: Context) {
+export async function versionAPI (ctx: Context): Promise<void> {
   ctx.body = {
     result: {
-      name: 'webscraper',
-    },
+      name: 'webscraper'
+    }
   }
 }
 
-export async function healthzAPI(ctx: Context) {
+export async function healthzAPI (ctx: Context): Promise<void> {
   const { db } = ctx.app.context
   const s = ctx.app.context.db.getState()
   const c = new Counter('Documents')
@@ -29,17 +28,17 @@ export async function healthzAPI(ctx: Context) {
       documents: c.row.cnt,
       hosts: s._hosts.length,
       openConnections: s._openConnections,
-      inFlightQueries: s._inFlightQueries,
+      inFlightQueries: s._inFlightQueries
     }
   }
 }
 
-export async function scrapingAPI(ctx: Context) {
+export async function scrapingAPI (ctx: Context): Promise<void> {
   const { db } = ctx.app.context
   const { url } = ctx.request.query
 
   if (!isValidUrl(url)) {
-    ctx.throw(400, format('Invalid scraping URL: %s',  url))
+    ctx.throw(400, format('Invalid scraping URL: %s', url))
   }
 
   const doc = await Document.findLatest(db, url as string)
@@ -47,7 +46,7 @@ export async function scrapingAPI(ctx: Context) {
     ctx.body = {
       result: {
         id: doc.id.toString('base64url'),
-        url: doc.row.url,
+        url: doc.row.url
       }
     }
     return
@@ -84,19 +83,19 @@ export async function scrapingAPI(ctx: Context) {
   ctx.body = {
     result: {
       id: doc.id.toString('base64url'),
-      url: doc.row.url,
+      url: doc.row.url
     }
   }
 }
 
-export async function documentAPI(ctx: Context) {
+export async function documentAPI (ctx: Context): Promise<void> {
   const { db } = ctx.app.context
   const { id, url, output } = ctx.request.query
 
-  var doc
-  if (typeof id == 'string' && id != '') {
-    const idBuf = Buffer.from(id as string, 'base64url')
-    if (idBuf.length == 28) {
+  let doc
+  if (typeof id === 'string' && id !== '') {
+    const idBuf = Buffer.from(id, 'base64url')
+    if (idBuf.length === 28) {
       doc = Document.fromId(idBuf)
     }
   } else if (isValidUrl(url)) {
@@ -108,9 +107,9 @@ export async function documentAPI(ctx: Context) {
   }
 
   let selectColumns = ['url', 'src', 'title', 'meta', 'meta', 'cbor']
-  if (output == 'basic') { // 'basic', 'detail', 'full'
+  if (output === 'basic') { // 'basic', 'detail', 'full'
     selectColumns = ['url', 'src', 'title', 'meta']
-  } else if (output == 'full') {
+  } else if (output === 'full') {
     selectColumns = ['url', 'src', 'title', 'meta', 'cbor', 'html', 'page']
   }
 
@@ -120,11 +119,11 @@ export async function documentAPI(ctx: Context) {
     result: {
       id: doc.id.toString('base64url'),
       url: doc.row.url,
-      doc: doc.toJSON(),
+      doc: doc.toJSON()
     }
   }
 }
 
-function isValidUrl(url: any): boolean {
-  return typeof url == 'string' && url.startsWith('https://') // node 20 && URL.canParse(url)
+function isValidUrl (url: any): boolean {
+  return typeof url === 'string' && url.startsWith('https://') // node 20 && URL.canParse(url)
 }

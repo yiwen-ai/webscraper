@@ -42,15 +42,15 @@ import { Mathematics } from '@tiptap-pro/extension-mathematics'
 const tiptapExtensions = [
   Document,
   Details.configure({
-    persist: true,
+    persist: true
   }),
   DetailsSummary,
   DetailsContent,
   Emoji.configure({
     enableEmoticons: true,
     emojis: [
-      ...emojis,
-    ],
+      ...emojis
+    ]
   }),
   Color,
   Bold,
@@ -70,8 +70,8 @@ const tiptapExtensions = [
     validate: (href: string) => href.startsWith('https://') || href.startsWith('mailto:') || href.startsWith('#'),
     HTMLAttributes: {
       rel: 'noopener noreferrer',
-      target: '_blank',
-    },
+      target: '_blank'
+    }
   }),
   ListItem,
   Mathematics,
@@ -85,7 +85,7 @@ const tiptapExtensions = [
   TableHeader,
   TableRow,
   TaskItem.configure({
-    nested: true,
+    nested: true
   }),
   TaskList,
   Text,
@@ -94,10 +94,10 @@ const tiptapExtensions = [
   Typography,
   Underline,
   UniqueID.configure({
-    types: ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell'],
+    types: ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell']
   }),
   Youtube.configure({
-    inline: false,
+    inline: false
   })
 ]
 
@@ -115,12 +115,12 @@ interface Node extends PartialNode {
 class JSONDocumentAmender {
   ids: Set<string>
 
-  constructor() {
+  constructor () {
     this.ids = new Set()
   }
 
-  amendId(id: string) {
-    if (typeof id === 'string' && id != '') {
+  amendId (id: string): string {
+    if (typeof id === 'string' && id !== '') {
       this.ids.add(id)
     } else {
       id = nanoid(6)
@@ -133,7 +133,7 @@ class JSONDocumentAmender {
   }
 
   // https://prosemirror.net/docs/ref/#model.Document_Structure
-  amendNode(node: Node): any {
+  amendNode (node: Node): any {
     // attrs: Attrs
     if (node.attrs != null) {
       // tiptap BUG: generateJSON reuses some attrs object, we need to clone a new one.
@@ -146,9 +146,11 @@ class JSONDocumentAmender {
     // marks: Mark[]
     if (node.marks != null) {
       for (const mark of node.marks) {
-        if (mark.type === 'link' && Object.hasOwn(mark, 'attrs')) {
+        if (mark.type === 'link' && mark.attrs != null) {
           delete mark.attrs.class
-          if (mark.attrs.href?.startsWith('#')) {
+
+          const href = mark.attrs.href
+          if (typeof href === 'string' && href.startsWith('#')) {
             delete mark.attrs.target
           }
         }
@@ -166,13 +168,16 @@ class JSONDocumentAmender {
   }
 }
 
-export function parseHTMLDocument(html: string) {
+export function parseHTMLDocument (html: string): {
+  json: string
+  html: string
+} {
   const jsonDoc = generateJSON(html, tiptapExtensions)
   const amender = new JSONDocumentAmender()
   const htmlDoc = generateHTML(amender.amendNode(jsonDoc as Node), tiptapExtensions)
 
   return {
     json: JSON.stringify(jsonDoc),
-    html: htmlDoc,
+    html: htmlDoc
   }
 }
