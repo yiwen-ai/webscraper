@@ -146,6 +146,9 @@ dependencies:
   crawlee:
     specifier: ^3.3.2
     version: 3.3.2(playwright@1.34.3)
+  http-errors:
+    specifier: ^2.0.0
+    version: 2.0.0
   koa:
     specifier: ^2.14.2
     version: 2.14.2
@@ -163,6 +166,9 @@ devDependencies:
   '@types/config':
     specifier: ^3.3.0
     version: 3.3.0
+  '@types/http-errors':
+    specifier: ^2.0.1
+    version: 2.0.1
   '@types/katex':
     specifier: ^0.16.0
     version: 0.16.0

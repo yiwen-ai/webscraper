@@ -39,6 +39,8 @@ import { Emoji, emojis } from '@tiptap-pro/extension-emoji'
 import { UniqueID } from '@tiptap-pro/extension-unique-id'
 import { Mathematics } from '@tiptap-pro/extension-mathematics'
 
+// import { writeFileSync } from 'node:fs'
+
 const tiptapExtensions = [
   Document,
   Details.configure({
@@ -67,10 +69,10 @@ const tiptapExtensions = [
     openOnClick: false,
     linkOnPaste: false,
     autolink: false,
-    validate: (href: string) => href.startsWith('https://') || href.startsWith('mailto:') || href.startsWith('#'),
+    validate: isValidHref,
     HTMLAttributes: {
-      rel: 'noopener noreferrer',
-      target: '_blank'
+      rel: '',
+      target: ''
     }
   }),
   ListItem,
@@ -149,9 +151,11 @@ class JSONDocumentAmender {
         if (mark.type === 'link' && mark.attrs != null) {
           delete mark.attrs.class
 
-          const href = mark.attrs.href
-          if (typeof href === 'string' && href.startsWith('#')) {
+          if (isSameOriginHref(mark.attrs.href)) {
             delete mark.attrs.target
+          } else {
+            mark.attrs.rel = 'noopener noreferrer'
+            mark.attrs.target = '_blank'
           }
         }
       }
@@ -169,15 +173,39 @@ class JSONDocumentAmender {
 }
 
 export function parseHTMLDocument (html: string): {
-  json: string
+  json: any
   html: string
 } {
+  // writeFileSync('./debug/test-s.html', html, 'utf8')
+
   const jsonDoc = generateJSON(html, tiptapExtensions)
   const amender = new JSONDocumentAmender()
   const htmlDoc = generateHTML(amender.amendNode(jsonDoc as Node), tiptapExtensions)
 
+  // writeFileSync('./debug/test.html', htmlDoc, 'utf8')
+  // writeFileSync('./debug/test.json', JSON.stringify(jsonDoc), 'utf8')
   return {
-    json: JSON.stringify(jsonDoc),
+    json: jsonDoc,
     html: htmlDoc
   }
+}
+
+const LOCALHOST = 'https://localhost'
+function isSameOriginHref (href: string): boolean {
+  if (typeof href === 'string') {
+    try {
+      const url = new URL(href, LOCALHOST)
+      return url.origin === LOCALHOST
+    } catch (e) {}
+  }
+  return false
+}
+function isValidHref (href: string): boolean {
+  if (typeof href === 'string') {
+    try {
+      const url = new URL(href, LOCALHOST)
+      return url.protocol === 'https:' || url.protocol === 'mailto:'
+    } catch (e) {}
+  }
+  return false
 }

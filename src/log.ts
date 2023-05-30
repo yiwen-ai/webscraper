@@ -46,6 +46,9 @@ export function writeLog (log: Log): void {
 
 export function logError (err: Error): void {
   const log = createLog(Date.now(), LogLevel.Error, err.message)
-  Object.assign(log, err)
+  for (const key of Object.getOwnPropertyNames(err)) {
+    log[key] = (err as any)[key]
+  }
+  log.stack = err.stack
   writeLog(log)
 }

@@ -63,6 +63,7 @@ export async function scraping (url: string): Promise<{
         }
       })
 
+      $('script').remove()
       let articleContent = articleTitle.parent()
       // try to find the article content
       if (getCheerioText(articleContent).length < doc.title.length * 2) {

@@ -61,9 +61,9 @@ async function initContext (ctx: Koa.Context, next: Koa.Next): Promise<void> {
       writeLog(errLog)
     }
 
+    log.msg = err.message
     ctx.status = err.status == null ? 500 : err.status
     ctx.body = {
-      id: log.xRequestID,
       error: {
         code: err.code,
         message: err.message,

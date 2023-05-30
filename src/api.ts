@@ -1,4 +1,5 @@
 import { format } from 'node:util'
+import { URL } from 'node:url'
 
 import { type Context } from 'koa'
 
@@ -43,7 +44,22 @@ export async function scrapingAPI (ctx: Context): Promise<void> {
 
   const doc = await Document.findLatest(db, url as string)
   if (doc.isFresh) {
+    // a fresh document is a document that has been scraped within the last 3600 seconds
     ctx.body = {
+      readyAfter: 0, // client can get the document after 0 seconds
+      result: {
+        id: doc.id.toString('base64url'),
+        url: doc.row.url
+      }
+    }
+    return
+  }
+
+  const acquired = await doc.acquire(db)
+  if (!acquired) {
+    // fail to get the document scraping lock, it's being scraped by another process
+    ctx.body = {
+      readyAfter: 3, // client should try to get the document after 3 seconds
       result: {
         id: doc.id.toString('base64url'),
         url: doc.row.url
@@ -65,7 +81,7 @@ export async function scrapingAPI (ctx: Context): Promise<void> {
     doc.setCBOR(res.json)
     doc.setHTML(res.html)
 
-    await doc.insert(db)
+    await doc.save(db)
     await new Counter('Documents').incrOne(db)
 
     log.url = d.url
@@ -76,11 +92,15 @@ export async function scrapingAPI (ctx: Context): Promise<void> {
     log.cborLength = doc.row.cbor?.length
     log.elapsed = Date.now() - log.start
     writeLog(log)
-  }).catch((err) => {
+  }).catch(async (err) => {
+    // remove the partially saved document if scraping failed
+    // so other requests can retry scraping
+    await doc.release(db)
     logError(err)
   })
 
   ctx.body = {
+    readyAfter: 2, // client should try to get the document after 2 seconds
     result: {
       id: doc.id.toString('base64url'),
       url: doc.row.url
@@ -103,7 +123,7 @@ export async function documentAPI (ctx: Context): Promise<void> {
   }
 
   if (doc == null) {
-    ctx.throw(400, format('Invalid document id %s or url %s', id, url))
+    ctx.throw(400, format('invalid document id %s or url %s', id, url))
   }
 
   let selectColumns = ['url', 'src', 'title', 'meta', 'meta', 'cbor']
@@ -125,5 +145,11 @@ export async function documentAPI (ctx: Context): Promise<void> {
 }
 
 function isValidUrl (url: any): boolean {
-  return typeof url === 'string' && url.startsWith('https://') // node 20 && URL.canParse(url)
+  if (typeof url === 'string' && url.startsWith('https://')) {
+    try {
+      const v = new URL(url)
+      return v != null
+    } catch (e) {}
+  }
+  return false
 }

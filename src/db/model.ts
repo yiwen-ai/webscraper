@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer'
 
+import createError from 'http-errors'
 import { types, type Client } from 'cassandra-driver'
 import Long from 'long'
 import { Request } from '@crawlee/core'
@@ -59,7 +60,7 @@ export class Counter {
     const result = await cli.execute(query, params, { prepare: true })
     const row = result.first()
     if (row == null) {
-      throw new Error(`Counter ${this.row.key} not found`)
+      throw createError(404, `fill counter ${this.row.key} not found`, { expose: true })
     }
 
     this.row.cnt = row.get('cnt')
@@ -218,7 +219,7 @@ export class Document {
     const row = result.first()
     if (row == null) {
       const name = this.row.src !== '' ? this.row.src : this.id.toString('base64url')
-      throw new Error(`Document ${name} at ${this.row.at.toString()} not found`)
+      throw createError(404, `fill document ${name} at ${this.row.at.toString()} not found`, { expose: true })
     }
 
     // @ts-expect-error: should ignore
@@ -228,17 +229,38 @@ export class Document {
     })
   }
 
-  async insert (cli: Client): Promise<void> {
+  async acquire (cli: Client): Promise<boolean> {
+    const query = 'INSERT INTO doc (oid,at,url) VALUES (?,?,?) IF NOT EXISTS USING TTL 60'
+    const params = [this.row.oid, this.row.at, this.row.url]
+
+    const result = await cli.execute(query, params, { prepare: true })
+    const row = result.first()
+    if (row == null) {
+      const name = this.row.src !== '' ? this.row.src : this.id.toString('base64url')
+      throw createError(500, `acquire document ${name} at ${this.row.at.toString()} no result`)
+    }
+
+    return row.get('[applied]') as boolean
+  }
+
+  async release (cli: Client): Promise<void> {
+    const query = 'DELETE FROM doc WHERE oid=? AND at=?'
+    const params = [this.row.oid, this.row.at]
+
+    await cli.execute(query, params, { prepare: true })
+  }
+
+  async save (cli: Client): Promise<void> {
     if (this.row.cbor == null) {
       throw new Error('Document cbor is null')
     }
 
     if (Buffer.byteLength(this.row.page, 'utf8') > MAX_CELL_SIZE || this.row.cbor.length > MAX_CELL_SIZE) {
-      throw new Error(`Document ${this.row.src} is too large`)
+      throw createError(400, `document ${this.row.src} is too large`)
     }
 
     const columns = Document.columns
-    const query = `INSERT INTO doc (${columns.join(',')}) VALUES (${columns.map((c) => '?').join(',')}) IF NOT EXISTS`
+    const query = `INSERT INTO doc (${columns.join(',')}) VALUES (${columns.map((c) => '?').join(',')}) USING TTL 0`
     // @ts-expect-error: should ignore
     const params = columns.map((c) => this.row[c])
 
