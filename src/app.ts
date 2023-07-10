@@ -7,7 +7,7 @@ import { LogLevel, createLog, writeLog } from './log.js'
 import { connect } from './db/scylladb.js'
 import { versionAPI, healthzAPI, scrapingAPI, documentAPI } from './api.js'
 
-const GZIP_MIN_LENGTH = 1024
+const GZIP_MIN_LENGTH = 128
 
 export async function initApp (app: Koa): Promise<void> {
   // attach stateful components to the application context

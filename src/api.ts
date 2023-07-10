@@ -6,7 +6,7 @@ import { type Context } from 'koa'
 import { LogLevel, createLog, logError, writeLog } from './log.js'
 import { scraping } from './crawler.js'
 import { parseHTMLDocument } from './tiptap.js'
-import { Counter, Document } from './db/model.js'
+import { Document } from './db/model.js'
 
 const serverStartAt = Date.now()
 
@@ -19,14 +19,10 @@ export async function versionAPI (ctx: Context): Promise<void> {
 }
 
 export async function healthzAPI (ctx: Context): Promise<void> {
-  const { db } = ctx.app.context
   const s = ctx.app.context.db.getState()
-  const c = new Counter('Documents')
-  await c.fill(db)
   ctx.body = {
     result: {
       start: serverStartAt,
-      documents: c.row.cnt,
       hosts: s._hosts.length,
       openConnections: s._openConnections,
       inFlightQueries: s._inFlightQueries
@@ -82,7 +78,6 @@ export async function scrapingAPI (ctx: Context): Promise<void> {
     doc.setHTML(res.html)
 
     await doc.save(db)
-    await new Counter('Documents').incrOne(db)
 
     log.url = d.url
     log.title = d.title
