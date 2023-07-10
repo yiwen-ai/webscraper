@@ -16,8 +16,8 @@ jobs:
 
     - name: Run pnpm
       run: |
-        npm config set "@tiptap-pro:registry" https://registry.tiptap.dev/
-        npm config set "//registry.tiptap.dev/:_authToken" ${{ secrets.TIPTAP_TOKEN }}
+        echo '@tiptap-pro:registry=https://registry.tiptap.dev/' >> .npmrc
+        echo '//registry.tiptap.dev/:_authToken="${{ secrets.TIPTAP_TOKEN }}"' >> .npmrc
         npm install -g pnpm
         pnpm install
         pnpm run build
