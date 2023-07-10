@@ -161,6 +161,9 @@ dependencies:
   playwright:
     specifier: ^1.35.1
     version: 1.35.1
+  zeed-dom:
+    specifier: 0.10.5
+    version: 0.10.5
 
 devDependencies:
   '@types/config':
@@ -5308,6 +5311,13 @@ packages:
   /yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  /zeed-dom@0.10.5:
+    resolution: {integrity: sha512-blCwZ4ACAsbGh7tNy8eG+2Ri1Mj9SJmxcYmjw0ijC5b4Oyfm/F2RDFTuFXIiiJaOq3xEcPBhgQpI1zIIfS4v4Q==}
+    engines: {node: '>=14.13.1'}
+    dependencies:
+      css-what: 6.1.0
+    dev: false
 
   /zeed-dom@0.9.26:
     resolution: {integrity: sha512-HWjX8rA3Y/RI32zby3KIN1D+mgskce+She4K7kRyyx62OiVxJ5FnYm8vWq0YVAja3Tf2S1M0XAc6O2lRFcMgcQ==}

@@ -1,6 +1,6 @@
 # the available images at https://crawlee.dev/docs/guides/docker-images
 # https://hub.docker.com/r/apify/actor-node-playwright-chrome/tags
-FROM apify/actor-node-playwright-chrome:18-1.34.3-next
+FROM apify/actor-node-playwright-chrome:20-1.35.1-beta
 
 # Copy just package.json and package-lock.json
 # to speed up the build using Docker layer cache.

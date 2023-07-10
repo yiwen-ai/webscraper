@@ -1,6 +1,6 @@
 {
   "name": "webscraper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "",
   "private": true,
   "main": "dist/main.js",
@@ -77,7 +77,8 @@
     "koa": "^2.14.2",
     "long": "^5.2.3",
     "nanoid": "^4.0.2",
-    "playwright": "^1.35.1"
+    "playwright": "^1.35.1",
+    "zeed-dom": "0.10.5"
   },
   "devDependencies": {
     "@types/config": "^3.3.0",

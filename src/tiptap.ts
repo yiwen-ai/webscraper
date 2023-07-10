@@ -177,7 +177,8 @@ export function parseHTMLDocument (html: string): {
   html: string
 } {
   // writeFileSync('./debug/test-s.html', html, 'utf8')
-
+  // some error: "_a.startsWith is not a function"
+  // https://discuss.prosemirror.net/t/is-there-a-way-to-run-prosemirror-on-nodejs/2517/8
   const jsonDoc = generateJSON(html, tiptapExtensions)
   const amender = new JSONDocumentAmender()
   const htmlDoc = generateHTML(amender.amendNode(jsonDoc as Node), tiptapExtensions)
