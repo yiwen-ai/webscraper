@@ -8,16 +8,17 @@ COPY --chown=myuser package.json ./
 COPY --chown=myuser pnpm-lock.yaml ./
 COPY --chown=myuser .npmrc ./
 
-# Install NPM packages, skip optional and development dependencies to
-# keep the image small. Avoid logging too much and print the dependency
-# tree for debugging
+USER root
+WORKDIR /home/myuser
 RUN npm --quiet set progress=false \
-    && npm install pnpm --force \
+    && npm install -g pnpm \
     && echo "Node.js version:" \
     && node --version \
     && echo "Installed NPM packages:" \
     && (npm list || true)
 
+USER myuser
+WORKDIR /home/myuser
 RUN pnpm install --prod \
     && echo "Installed NPM packages:" \
     && (pnpm list || true)
