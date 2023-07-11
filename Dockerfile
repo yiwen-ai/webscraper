@@ -12,7 +12,7 @@ COPY --chown=myuser .npmrc ./
 # keep the image small. Avoid logging too much and print the dependency
 # tree for debugging
 RUN npm --quiet set progress=false \
-    && npm install -g pnpm \
+    && npm install pnpm \
     && pnpm install --prod \
     && echo "Installed NPM packages:" \
     && (pnpm list || true) \
