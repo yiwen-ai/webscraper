@@ -1,24 +1,23 @@
-# the available images at https://crawlee.dev/docs/guides/docker-images
-# https://hub.docker.com/r/apify/actor-node-playwright-chrome/tags
 FROM apify/actor-node-playwright-chrome:20-1.35.1-beta
 
-# Copy just package.json and package-lock.json
+# the available images at https://crawlee.dev/docs/guides/docker-images
+# https://hub.docker.com/r/apify/actor-node-playwright-chrome/tags
+# https://github.com/apify/apify-actor-docker/blob/master/node-playwright-chrome/Dockerfile
+
+USER root
+RUN npm --quiet set progress=false \
+    && npm install -g pnpm \
+    && echo "Node.js version:" \
+    && node --version
+
+USER myuser
+WORKDIR /home/myuser
+# Copy just package.json and pnpm-lock.json
 # to speed up the build using Docker layer cache.
 COPY --chown=myuser package.json ./
 COPY --chown=myuser pnpm-lock.yaml ./
 COPY --chown=myuser .npmrc ./
 
-USER root
-WORKDIR /home/myuser
-RUN npm --quiet set progress=false \
-    && npm install -g pnpm \
-    && echo "Node.js version:" \
-    && node --version \
-    && echo "Installed NPM packages:" \
-    && (npm list || true)
-
-USER myuser
-WORKDIR /home/myuser
 RUN pnpm install --prod \
     && echo "Installed NPM packages:" \
     && (pnpm list || true)
