@@ -4,7 +4,7 @@ FROM apify/actor-node-playwright-chrome:20-1.35.1-beta
 
 # Copy just package.json and package-lock.json
 # to speed up the build using Docker layer cache.
-COPY --chown=myuser package*.json ./
+COPY --chown=myuser package.json ./
 COPY --chown=myuser pnpm-lock.yaml ./
 COPY --chown=myuser .npmrc ./
 
@@ -12,12 +12,15 @@ COPY --chown=myuser .npmrc ./
 # keep the image small. Avoid logging too much and print the dependency
 # tree for debugging
 RUN npm --quiet set progress=false \
-    && npm install pnpm \
-    && pnpm install --prod \
-    && echo "Installed NPM packages:" \
-    && (pnpm list || true) \
+    && npm install pnpm --force \
     && echo "Node.js version:" \
-    && node --version
+    && node --version \
+    && echo "Installed NPM packages:" \
+    && (npm list || true)
+
+RUN pnpm install --prod \
+    && echo "Installed NPM packages:" \
+    && (pnpm list || true)
 
 # Next, copy the remaining files and directories with the source code.
 # Since we do this after NPM install, quick build will be really fast
