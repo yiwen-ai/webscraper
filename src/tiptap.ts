@@ -1,5 +1,7 @@
+// import { writeFileSync } from 'node:fs'
 import { nanoid } from 'nanoid'
-import { generateJSON, generateHTML } from '@tiptap/html'
+// import { generateJSON, generateHTML } from '@tiptap/html'
+import { generateJSON, generateHTML } from './html.js'
 import Color from '@tiptap/extension-color'
 import Bold from '@tiptap/extension-bold'
 import Document from '@tiptap/extension-document'
@@ -176,15 +178,9 @@ export function parseHTMLDocument (html: string): {
   json: any
   html: string
 } {
-  // writeFileSync('./debug/test-s.html', html, 'utf8')
-  // some error: "_a.startsWith is not a function"
-  // https://discuss.prosemirror.net/t/is-there-a-way-to-run-prosemirror-on-nodejs/2517/8
   const jsonDoc = generateJSON(html, tiptapExtensions)
   const amender = new JSONDocumentAmender()
   const htmlDoc = generateHTML(amender.amendNode(jsonDoc as Node), tiptapExtensions)
-
-  // writeFileSync('./debug/test.html', htmlDoc, 'utf8')
-  // writeFileSync('./debug/test.json', JSON.stringify(jsonDoc), 'utf8')
   return {
     json: jsonDoc,
     html: htmlDoc

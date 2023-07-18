@@ -161,9 +161,12 @@ dependencies:
   playwright:
     specifier: ^1.36.1
     version: 1.36.1
+  prosemirror-model:
+    specifier: ^1.19.3
+    version: 1.19.3
   zeed-dom:
-    specifier: 0.10.5
-    version: 0.10.5
+    specifier: git+https://github.com/yiwen-ai/zeed-dom.git#df3c697
+    version: github.com/yiwen-ai/zeed-dom/df3c697
 
 devDependencies:
   '@types/config':
@@ -5310,15 +5313,17 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  /zeed-dom@0.10.5:
-    resolution: {integrity: sha512-blCwZ4ACAsbGh7tNy8eG+2Ri1Mj9SJmxcYmjw0ijC5b4Oyfm/F2RDFTuFXIiiJaOq3xEcPBhgQpI1zIIfS4v4Q==}
+  /zeed-dom@0.9.26:
+    resolution: {integrity: sha512-HWjX8rA3Y/RI32zby3KIN1D+mgskce+She4K7kRyyx62OiVxJ5FnYm8vWq0YVAja3Tf2S1M0XAc6O2lRFcMgcQ==}
     engines: {node: '>=14.13.1'}
     dependencies:
       css-what: 6.1.0
     dev: false
 
-  /zeed-dom@0.9.26:
-    resolution: {integrity: sha512-HWjX8rA3Y/RI32zby3KIN1D+mgskce+She4K7kRyyx62OiVxJ5FnYm8vWq0YVAja3Tf2S1M0XAc6O2lRFcMgcQ==}
+  github.com/yiwen-ai/zeed-dom/df3c697:
+    resolution: {tarball: https://codeload.github.com/yiwen-ai/zeed-dom/tar.gz/df3c697}
+    name: zeed-dom
+    version: 0.10.5
     engines: {node: '>=14.13.1'}
     dependencies:
       css-what: 6.1.0
