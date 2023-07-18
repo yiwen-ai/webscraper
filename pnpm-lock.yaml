@@ -131,6 +131,9 @@ dependencies:
   '@tiptap/pm':
     specifier: 2.1.0-rc.12
     version: 2.1.0-rc.12
+  '@yiwen-ai/zeed-dom':
+    specifier: ^0.10.6
+    version: 0.10.6
   cassandra-driver:
     specifier: ^4.6.4
     version: 4.6.4
@@ -164,9 +167,6 @@ dependencies:
   prosemirror-model:
     specifier: ^1.19.3
     version: 1.19.3
-  zeed-dom:
-    specifier: git+https://git@github.com:yiwen-ai/zeed-dom.git
-    version: github.com/yiwen-ai/zeed-dom/df3c697b3b8872943a604f5e30780d7f8aa521a4
 
 devDependencies:
   '@types/config':
@@ -1793,6 +1793,13 @@ packages:
   /@vladfrangu/async_event_emitter@2.2.2:
     resolution: {integrity: sha512-HIzRG7sy88UZjBJamssEczH5q7t5+axva19UbZLO6u0ySbYPrwzWiXBcC0WuHyhKKoeCyneH+FvYzKQq/zTtkQ==}
     engines: {node: '>=v14.0.0', npm: '>=7.0.0'}
+    dev: false
+
+  /@yiwen-ai/zeed-dom@0.10.6:
+    resolution: {integrity: sha512-jYCfz5VTA/6+EGfzL+4zMADYSk4YWubSBSNVwDbFIMsw+nCdgf5LOxPSUby4bBNHHi8c78VbG9/FVKlFYKBCvg==}
+    engines: {node: '>=14.13.1'}
+    dependencies:
+      css-what: 6.1.0
     dev: false
 
   /abab@2.0.6:
@@ -5315,15 +5322,6 @@ packages:
 
   /zeed-dom@0.9.26:
     resolution: {integrity: sha512-HWjX8rA3Y/RI32zby3KIN1D+mgskce+She4K7kRyyx62OiVxJ5FnYm8vWq0YVAja3Tf2S1M0XAc6O2lRFcMgcQ==}
-    engines: {node: '>=14.13.1'}
-    dependencies:
-      css-what: 6.1.0
-    dev: false
-
-  github.com/yiwen-ai/zeed-dom/df3c697b3b8872943a604f5e30780d7f8aa521a4:
-    resolution: {commit: df3c697b3b8872943a604f5e30780d7f8aa521a4, repo: git+ssh://git@github.com/yiwen-ai/zeed-dom.git, type: git}
-    name: zeed-dom
-    version: 0.10.5
     engines: {node: '>=14.13.1'}
     dependencies:
       css-what: 6.1.0

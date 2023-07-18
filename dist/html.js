@@ -1,6 +1,6 @@
 import { getSchema } from '@tiptap/core';
 import { Node, DOMParser, DOMSerializer } from '@tiptap/pm/model';
-import { vdom, createHTMLDocument } from 'zeed-dom';
+import { vdom, createHTMLDocument } from '@yiwen-ai/zeed-dom';
 export function generateJSON(html, extensions) {
     const schema = getSchema(extensions);
     const dom = vdom(html);

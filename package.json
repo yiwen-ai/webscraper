@@ -1,6 +1,6 @@
 {
   "name": "webscraper",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "",
   "private": true,
   "main": "dist/main.js",
@@ -79,7 +79,7 @@
     "nanoid": "^4.0.2",
     "playwright": "^1.36.1",
     "prosemirror-model": "^1.19.3",
-    "zeed-dom": "git+https://git@github.com:yiwen-ai/zeed-dom.git"
+    "@yiwen-ai/zeed-dom": "^0.10.6"
   },
   "devDependencies": {
     "@types/config": "^3.3.0",

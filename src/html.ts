@@ -1,6 +1,6 @@
 import { type Extensions, getSchema, type JSONContent } from '@tiptap/core'
 import { Node, DOMParser, DOMSerializer, type Schema } from '@tiptap/pm/model'
-import { vdom, createHTMLDocument, type VHTMLDocument } from 'zeed-dom'
+import { vdom, createHTMLDocument, type VHTMLDocument } from '@yiwen-ai/zeed-dom'
 
 export function generateJSON (html: string, extensions: Extensions): Record<string, any> {
   const schema = getSchema(extensions)
