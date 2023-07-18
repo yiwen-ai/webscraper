@@ -165,8 +165,8 @@ dependencies:
     specifier: ^1.19.3
     version: 1.19.3
   zeed-dom:
-    specifier: git+https://github.com/yiwen-ai/zeed-dom.git#df3c697
-    version: github.com/yiwen-ai/zeed-dom/df3c697
+    specifier: git+https://git@github.com:yiwen-ai/zeed-dom.git
+    version: github.com/yiwen-ai/zeed-dom/df3c697b3b8872943a604f5e30780d7f8aa521a4
 
 devDependencies:
   '@types/config':
@@ -5320,8 +5320,8 @@ packages:
       css-what: 6.1.0
     dev: false
 
-  github.com/yiwen-ai/zeed-dom/df3c697:
-    resolution: {commit: df3c697, repo: git+ssh://git@github.com/yiwen-ai/zeed-dom.git, type: git}
+  github.com/yiwen-ai/zeed-dom/df3c697b3b8872943a604f5e30780d7f8aa521a4:
+    resolution: {commit: df3c697b3b8872943a604f5e30780d7f8aa521a4, repo: git+ssh://git@github.com/yiwen-ai/zeed-dom.git, type: git}
     name: zeed-dom
     version: 0.10.5
     engines: {node: '>=14.13.1'}
