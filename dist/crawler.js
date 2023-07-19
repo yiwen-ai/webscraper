@@ -8,7 +8,7 @@ export async function scraping(url) {
         reject = _reject;
     });
     const crawler = new CheerioCrawler({
-        requestHandler: async ({ request, $ }) => {
+        requestHandler: ({ request, $ }) => {
             let articleTitle = $('h1');
             if (articleTitle.length === 0) {
                 articleTitle = $('h2');
@@ -52,7 +52,7 @@ export async function scraping(url) {
             doc.html = articleContent.html();
             resolve(doc);
         },
-        failedRequestHandler: async ({ request }) => {
+        failedRequestHandler: ({ request }) => {
             const msg = request.errorMessages.map((str) => {
                 let i = str.indexOf('\n');
                 if (i === -1)

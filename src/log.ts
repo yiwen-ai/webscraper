@@ -25,7 +25,7 @@ export enum LogLevel {
   Debug = 'debug',
 }
 
-export function createLog (start: number = Date.now(), level: LogLevel = LogLevel.Info, msg: string = ''): Log {
+export function createLog (start: number = Date.now(), level: LogLevel = LogLevel.Info, msg = ''): Log {
   const log: Log = Object.create(null)
   log.level = level
   log.start = start

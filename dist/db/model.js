@@ -1,71 +1,32 @@
 import { Buffer } from 'node:buffer';
 import createError from 'http-errors';
-import { types } from 'cassandra-driver';
-import Long from 'long';
-import { Request } from '@crawlee/core';
 import { encode } from 'cbor-x';
-const { createHash } = await import('node:crypto');
+import { Xid } from 'xid-ts';
 const MAX_CELL_SIZE = 1024 * 1024 - 1; // 1MB
-// @ts-expect-error: should ignore
-if (BigInt.prototype.toJSON == null) {
-    /* eslint no-extend-native: ["error", { "exceptions": ["BigInt"] }] */
-    // @ts-expect-error: should ignore
-    BigInt.prototype.toJSON = function () {
-        return this.toString();
-    };
-}
-export class Document {
-    id;
+export class DocumentModel {
     row;
-    static fromUrl(url) {
-        const doc = new Document();
-        const req = new Request({ url });
-        sha1(req.uniqueKey).copy(doc.id);
-        doc.row.at = types.Long.fromInt(Math.floor(Date.now() / 1000));
-        doc.row.url = req.uniqueKey;
-        doc.row.src = url;
-        doc._fillAt();
-        return doc;
+    static get columns() {
+        return ['id', 'url', 'src', 'title', 'meta', 'content', 'html', 'page'];
     }
-    static fromId(id) {
-        const doc = new Document();
-        id.copy(doc.id);
-        const bytes = new Array(8);
-        for (let i = 0; i < 8; i++) {
-            bytes[i] = doc.id[20 + i];
+    constructor(id) {
+        if (id == null) {
+            id = new Xid();
         }
-        // types.Long is a old version of Long
-        doc.row.at = types.Long.fromValue(Long.fromBytesBE(bytes));
-        return doc;
-    }
-    constructor() {
-        this.id = Buffer.alloc(28);
         this.row = Object.create(null);
-        this.row.hid = this.id.slice(0, 20);
-        this.row.at = types.Long.fromInt(0);
+        this.row.id = id;
         this.row.url = '';
         this.row.src = '';
         this.row.title = '';
-        this.row.meta = {};
-        this.row.cbor = null;
+        this.row.meta = Object.create(null);
+        this.row.content = null;
         this.row.html = '';
         this.row.page = '';
     }
     get isFresh() {
-        return this.row.title !== '' && this.row.at.gt(Math.floor(Date.now() / 1000) - 3600);
+        return this.row.title !== '' && this.row.id.timestamp() > (Date.now() / 1000 - 24 * 3600);
     }
     toJSON() {
-        return {
-            hid: this.row.hid,
-            at: BigInt(this.row.at.toString()),
-            url: this.row.url,
-            src: this.row.src,
-            title: this.row.title,
-            meta: this.row.meta,
-            cbor: this.row.cbor,
-            html: this.row.html,
-            page: this.row.page
-        };
+        return this.row;
     }
     setTitle(str) {
         if (str.includes('\n')) {
@@ -78,8 +39,8 @@ export class Document {
             this.row.meta = meta;
         }
     }
-    setCBOR(json) {
-        this.row.cbor = encode(json);
+    setContent(obj) {
+        this.row.content = encode(obj);
     }
     setHTML(str) {
         this.row.html = str.trim();
@@ -87,76 +48,79 @@ export class Document {
     setPage(str) {
         this.row.page = str.trim();
     }
-    _fillAt() {
-        const bytes = Long.fromValue(this.row.at).toBytesBE();
-        for (let i = 0; i < 8; i++) {
-            this.id[20 + i] = bytes[i];
-        }
-    }
-    async fill(cli, selectColumns = ['url', 'src', 'title', 'meta', 'cbor', 'html', 'page']) {
-        const query = `SELECT ${selectColumns.join(',')} FROM doc WHERE hid=? AND at=? LIMIT 1`;
-        const params = [this.row.hid, this.row.at]; // find the document in a hour.
+    async fill(cli, selectColumns = ['url', 'src', 'title', 'meta', 'content', 'html', 'page']) {
+        const query = `SELECT ${selectColumns.join(',')} FROM doc WHERE id=? LIMIT 1`;
+        const params = [Buffer.from(this.row.id)]; // find the document in a hour.
         const result = await cli.execute(query, params, { prepare: true });
         const row = result.first();
         if (row == null) {
-            const name = this.row.src !== '' ? this.row.src : this.id.toString('base64url');
-            throw createError(404, `fill document ${name} at ${this.row.at.toString()} not found`, { expose: true });
+            const name = this.row.src !== '' ? this.row.src : this.row.id.toString();
+            throw createError(404, `fill document ${name} not found`, { expose: true });
         }
         // @ts-expect-error: should ignore
         row.forEach((value, name) => {
             // @ts-expect-error: should ignore
+            // @typescript-eslint/no-unsafe-assignment: should ignore
             this.row[name] = value;
         });
     }
     async acquire(cli) {
-        const query = 'INSERT INTO doc (hid,at,url) VALUES (?,?,?) IF NOT EXISTS USING TTL 60';
-        const params = [this.row.hid, this.row.at, this.row.url];
+        const query = 'INSERT INTO doc (id,url) VALUES (?,?) IF NOT EXISTS USING TTL 60';
+        const params = [Buffer.from(this.row.id), this.row.url];
         const result = await cli.execute(query, params, { prepare: true });
         const row = result.first();
         if (row == null) {
-            const name = this.row.src !== '' ? this.row.src : this.id.toString('base64url');
-            throw createError(500, `acquire document ${name} at ${this.row.at.toString()} no result`);
+            const name = this.row.src !== '' ? this.row.src : this.row.id.toString();
+            throw createError(500, `acquire document ${name} no result`);
         }
         return row.get('[applied]');
     }
     async release(cli) {
-        const query = 'DELETE FROM doc WHERE hid=? AND at=?';
-        const params = [this.row.hid, this.row.at];
+        const query = 'DELETE FROM doc WHERE id=?';
+        const params = [Buffer.from(this.row.id)];
         await cli.execute(query, params, { prepare: true });
     }
     async save(cli) {
-        if (this.row.cbor == null) {
-            throw new Error('Document cbor is null');
+        if (this.row.content == null) {
+            throw new Error('Document content is null');
         }
-        if (Buffer.byteLength(this.row.page, 'utf8') > MAX_CELL_SIZE || this.row.cbor.length > MAX_CELL_SIZE) {
+        if (Buffer.byteLength(this.row.page, 'utf8') > MAX_CELL_SIZE || this.row.content.length > MAX_CELL_SIZE) {
             throw createError(400, `document ${this.row.src} is too large`);
         }
-        const columns = Document.columns;
-        const query = `INSERT INTO doc (${columns.join(',')}) VALUES (${columns.map((c) => '?').join(',')}) USING TTL 0`;
+        const columns = DocumentModel.columns;
+        const query = `INSERT INTO doc (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')}) USING TTL 0`;
         // @ts-expect-error: should ignore
         const params = columns.map((c) => this.row[c]);
+        params[0] = Buffer.from(this.row.id);
         await cli.execute(query, params, { prepare: true });
     }
     static async findLatest(cli, url) {
-        const doc = Document.fromUrl(url);
-        const query = 'SELECT at,title FROM doc WHERE hid=? LIMIT 1';
-        const params = [doc.row.hid];
+        const query = 'SELECT id,title FROM doc WHERE url=? LIMIT 100';
+        const params = [url];
         const result = await cli.execute(query, params, { prepare: true });
-        const row = result.first();
+        const doc = new DocumentModel();
+        doc.row.url = url;
+        result.rows.sort((a, b) => {
+            const aId = Xid.fromValue(a.get('id'));
+            const bId = Xid.fromValue(b.get('id'));
+            for (let i = 0; i < aId.length; i++) {
+                if (aId[i] < bId[i]) {
+                    return 1;
+                }
+                else if (aId[i] > bId[i]) {
+                    return -1;
+                }
+                continue;
+            }
+            return 0;
+            // return bId.compare(aId)
+        });
+        const rows = result.rows.filter((row) => row.get('title') != null);
+        const row = rows.length > 0 ? rows[0] : null;
         if (row != null) {
-            doc.row.at = row.get('at');
+            doc.row.id = Xid.fromValue(row.get('id'));
             doc.row.title = row.get('title');
-            doc._fillAt();
         }
         return doc;
     }
-    static tableName = 'art';
-    static get columns() {
-        return ['hid', 'at', 'url', 'src', 'title', 'meta', 'cbor', 'html', 'page'];
-    }
-}
-function sha1(str) {
-    const hash = createHash('sha1');
-    hash.update(str, 'utf8');
-    return hash.digest();
 }

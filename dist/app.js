@@ -13,8 +13,8 @@ export async function initApp(app) {
     router.use(initContext);
     router.get('/', versionAPI);
     router.get('/healthz', healthzAPI);
-    router.get('/scraping', scrapingAPI);
-    router.get('/document', documentAPI);
+    router.get('/v1/scraping', scrapingAPI);
+    router.get('/v1/document', documentAPI);
     app.use(router.routes());
     app.use(router.allowedMethods());
 }
@@ -49,7 +49,7 @@ async function initContext(ctx, next) {
             writeLog(errLog);
         }
         log.msg = err.message;
-        ctx.status = err.status == null ? 500 : err.status;
+        ctx.status = err.status ?? 500;
         ctx.body = {
             error: {
                 code: err.code,
@@ -61,11 +61,11 @@ async function initContext(ctx, next) {
     finally {
         // log when the response is finished or closed, whichever happens first.
         const { res } = ctx;
-        const onfinish = done.bind(null, 'finish');
-        const onclose = done.bind(null, 'close');
+        const onfinish = done.bind(null);
+        const onclose = done.bind(null);
         res.once('finish', onfinish);
         res.once('close', onclose);
-        function done(_event) {
+        function done() {
             res.removeListener('finish', onfinish);
             res.removeListener('close', onclose);
             log.length = ctx.length;
@@ -79,13 +79,12 @@ async function initContext(ctx, next) {
     if (body != null && typeof body === 'object') {
         if (acceptCBOR) {
             body = encode(body);
-            // console.log(body.toString('hex'))
-            ctx.set('content-length', body.length);
+            ctx.set('content-length', String(body.length));
             ctx.set('content-type', 'application/cbor');
         }
         else {
             body = Buffer.from(JSON.stringify(body), 'utf8');
-            ctx.set('content-length', body.length);
+            ctx.set('content-length', String(body.length));
             ctx.set('content-type', 'application/json');
         }
         if (body.length > GZIP_MIN_LENGTH && ctx.acceptsEncodings('gzip') === 'gzip') {

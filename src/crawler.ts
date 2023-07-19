@@ -14,7 +14,7 @@ export interface Document {
   page: string
 }
 
-export async function scraping (url: string): Promise<{
+export async function scraping(url: string): Promise<{
   requestId: string
   uniqueKey: string
   result: Promise<Document>
@@ -28,7 +28,7 @@ export async function scraping (url: string): Promise<{
   })
 
   const crawler = new CheerioCrawler({
-    requestHandler: async ({ request, $ }) => {
+    requestHandler: ({ request, $ }) => {
       let articleTitle = $('h1')
       if (articleTitle.length === 0) {
         articleTitle = $('h2')
@@ -38,7 +38,7 @@ export async function scraping (url: string): Promise<{
         reject(scrapingErr('not found', request)); return
       }
 
-      function getCheerioText ($el: Cheerio<Element>): string {
+      function getCheerioText($el: Cheerio<Element>): string {
         return $el.map((_i, el) => $(el).text().trim()).toArray().join(' ')
       }
 
@@ -73,11 +73,11 @@ export async function scraping (url: string): Promise<{
         articleContent = articleContent.parent()
       }
 
-      doc.html = articleContent.html() as string
+      doc.html = articleContent.html()!
       resolve(doc)
     },
 
-    failedRequestHandler: async ({ request }) => {
+    failedRequestHandler: ({ request }) => {
       const msg = request.errorMessages.map((str) => {
         let i = str.indexOf('\n')
         if (i === -1) i = str.length
@@ -98,7 +98,7 @@ export async function scraping (url: string): Promise<{
   }
 }
 
-function scrapingErr (msg: string, req: Request): any {
+function scrapingErr(msg: string, req: Request): any {
   const err = new Error(msg) as any
   err.name = 'ScrapingError'
   err.data = {

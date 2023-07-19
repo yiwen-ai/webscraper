@@ -1,6 +1,6 @@
 {
   "name": "webscraper",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "",
   "private": true,
   "main": "dist/main.js",
@@ -11,8 +11,8 @@
     "start:dev": "ts-node-esm -T src/main.ts",
     "debug": "ts-node-esm -T debug/format.ts",
     "build": "rm -rf dist && tsc",
-    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint:fix": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -68,6 +68,7 @@
     "@tiptap/extension-youtube": "2.1.0-rc.12",
     "@tiptap/html": "2.1.0-rc.12",
     "@tiptap/pm": "2.1.0-rc.12",
+    "@yiwen-ai/zeed-dom": "^0.10.6",
     "cassandra-driver": "^4.6.4",
     "cbor-x": "^1.5.3",
     "cheerio": "1.0.0-rc.12",
@@ -79,7 +80,8 @@
     "nanoid": "^4.0.2",
     "playwright": "^1.36.1",
     "prosemirror-model": "^1.19.3",
-    "@yiwen-ai/zeed-dom": "^0.10.6"
+    "uuid": "^9.0.0",
+    "xid-ts": "^1.0.0"
   },
   "devDependencies": {
     "@types/config": "^3.3.0",
@@ -88,13 +90,11 @@
     "@types/koa": "^2.13.6",
     "@types/koa__router": "^12.0.0",
     "@types/node": "^18.16.19",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@types/uuid": "^9.0.2",
+    "@typescript-eslint/eslint-plugin": "^6.1.0",
+    "@typescript-eslint/parser": "^6.1.0",
     "eslint": "^8.45.0",
-    "eslint-config-standard-with-typescript": "^34.0.1",
-    "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-n": "^15.7.0",
-    "eslint-plugin-promise": "^6.1.1",
-    "ts-node": "^10.9.1",
+    "tsup": "^7.1.0",
     "typescript": "^5.1.6"
   }
 }

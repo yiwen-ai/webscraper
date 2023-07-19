@@ -1,43 +1,40 @@
 import { format } from 'node:util';
 import { URL } from 'node:url';
+import { Xid } from 'xid-ts';
 import { LogLevel, createLog, logError, writeLog } from './log.js';
 import { scraping } from './crawler.js';
 import { parseHTMLDocument } from './tiptap.js';
-import { Document } from './db/model.js';
+import { DocumentModel } from './db/model.js';
 const serverStartAt = Date.now();
-export async function versionAPI(ctx) {
+export function versionAPI(ctx) {
     ctx.body = {
         result: {
             name: 'webscraper'
         }
     };
 }
-export async function healthzAPI(ctx) {
-    const s = ctx.app.context.db.getState();
+export function healthzAPI(ctx) {
+    const db = ctx.app.context.db;
+    const s = db.getState();
     ctx.body = {
         result: {
             start: serverStartAt,
-            hosts: s._hosts.length,
-            openConnections: s._openConnections,
-            inFlightQueries: s._inFlightQueries
+            scylla: s.toString(),
         }
     };
 }
 export async function scrapingAPI(ctx) {
-    const { db } = ctx.app.context;
+    const db = ctx.app.context.db;
     const { url } = ctx.request.query;
     if (!isValidUrl(url)) {
         ctx.throw(400, format('Invalid scraping URL: %s', url));
     }
-    const doc = await Document.findLatest(db, url);
+    const doc = await DocumentModel.findLatest(db, url);
     if (doc.isFresh) {
         // a fresh document is a document that has been scraped within the last 3600 seconds
         ctx.body = {
-            readyAfter: 0,
-            result: {
-                id: doc.id.toString('base64url'),
-                url: doc.row.url
-            }
+            retry: 0,
+            result: doc.toJSON()
         };
         return;
     }
@@ -45,9 +42,9 @@ export async function scrapingAPI(ctx) {
     if (!acquired) {
         // fail to get the document scraping lock, it's being scraped by another process
         ctx.body = {
-            readyAfter: 3,
+            retry: 1,
             result: {
-                id: doc.id.toString('base64url'),
+                id: doc.row.id,
                 url: doc.row.url
             }
         };
@@ -62,7 +59,7 @@ export async function scrapingAPI(ctx) {
         doc.setTitle(d.title);
         doc.setMeta(d.meta);
         doc.setPage(d.page);
-        doc.setCBOR(res.json);
+        doc.setContent(res.json);
         doc.setHTML(res.html);
         await doc.save(db);
         log.url = d.url;
@@ -70,7 +67,7 @@ export async function scrapingAPI(ctx) {
         log.meta = d.meta;
         log.pageLength = d.page.length;
         log.htmlLength = res.html.length;
-        log.cborLength = doc.row.cbor?.length;
+        log.cborLength = doc.row.content?.length;
         log.elapsed = Date.now() - log.start;
         writeLog(log);
     }).catch(async (err) => {
@@ -80,43 +77,34 @@ export async function scrapingAPI(ctx) {
         logError(err);
     });
     ctx.body = {
-        readyAfter: 2,
+        retry: 2,
         result: {
-            id: doc.id.toString('base64url'),
+            id: doc.row.id,
             url: doc.row.url
         }
     };
 }
 export async function documentAPI(ctx) {
     const { db } = ctx.app.context;
-    const { id, url, output } = ctx.request.query;
-    let doc;
-    if (typeof id === 'string' && id !== '') {
-        const idBuf = Buffer.from(id, 'base64url');
-        if (idBuf.length === 28) {
-            doc = Document.fromId(idBuf);
-        }
+    const { id, output } = ctx.request.query;
+    let xid = null;
+    try {
+        xid = Xid.fromValue(id);
     }
-    else if (isValidUrl(url)) {
-        doc = await Document.findLatest(db, url);
+    catch {
+        ctx.throw(404, format('invalid document id %s', id));
     }
-    if (doc == null) {
-        ctx.throw(400, format('invalid document id %s or url %s', id, url));
-    }
-    let selectColumns = ['url', 'src', 'title', 'meta', 'meta', 'cbor'];
+    const doc = new DocumentModel(xid);
+    let selectColumns = ['url', 'src', 'title', 'meta', 'content'];
     if (output === 'basic') { // 'basic', 'detail', 'full'
         selectColumns = ['url', 'src', 'title', 'meta'];
     }
     else if (output === 'full') {
-        selectColumns = ['url', 'src', 'title', 'meta', 'cbor', 'html', 'page'];
+        selectColumns = ['url', 'src', 'title', 'meta', 'content', 'html', 'page'];
     }
     await doc.fill(db, selectColumns);
     ctx.body = {
-        result: {
-            id: doc.id.toString('base64url'),
-            url: doc.row.url,
-            doc: doc.toJSON()
-        }
+        result: doc.row
     };
 }
 function isValidUrl(url) {
