@@ -43,7 +43,7 @@ export class DocumentModel {
   }
 
   get isFresh(): boolean {
-    return this.row.title !== '' && this.row.id.timestamp() > (Date.now() / 1000 - 24 * 3600)
+    return this.row.title !== '' && this.row.id.timestamp() > (Date.now() / 1000 - 3 * 24 * 3600)
   }
 
   toJSON(): Document {

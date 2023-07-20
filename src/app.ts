@@ -5,7 +5,7 @@ import { encode } from 'cbor-x'
 
 import { LogLevel, createLog, writeLog } from './log.js'
 import { connect } from './db/scylladb.js'
-import { versionAPI, healthzAPI, scrapingAPI, documentAPI } from './api.js'
+import { versionAPI, healthzAPI, scrapingAPI, searchAPI, documentAPI } from './api.js'
 
 const GZIP_MIN_LENGTH = 128
 
@@ -19,6 +19,7 @@ export async function initApp(app: Koa): Promise<void> {
   router.get('/', versionAPI)
   router.get('/healthz', healthzAPI)
   router.get('/v1/scraping', scrapingAPI)
+  router.get('/v1/search', searchAPI)
   router.get('/v1/document', documentAPI)
 
   app.use(router.routes())

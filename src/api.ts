@@ -30,6 +30,26 @@ export function healthzAPI(ctx: Context): void {
   }
 }
 
+export async function searchAPI(ctx: Context): Promise<void> {
+  const db = ctx.app.context.db as cassandra.Client
+  const { url } = ctx.request.query
+
+  if (!isValidUrl(url)) {
+    ctx.throw(400, format('Invalid scraping URL: %s', url))
+  }
+
+  const doc = await DocumentModel.findLatest(db, url as string)
+  if (doc.row.title != null && doc.row.title != "") {
+    try {
+      await doc.fill(db, ['src', 'meta', 'content'])
+    } catch (_) { }
+  }
+
+  ctx.body = {
+    result: doc.row
+  }
+}
+
 export async function scrapingAPI(ctx: Context): Promise<void> {
   const db = ctx.app.context.db as cassandra.Client
   const { url } = ctx.request.query
