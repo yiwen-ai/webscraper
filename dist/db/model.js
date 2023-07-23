@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 import createError from 'http-errors';
-import { encode } from 'cbor-x';
+import { encode } from 'cborg';
 import { Xid } from 'xid-ts';
 const MAX_CELL_SIZE = 1024 * 1024 - 1; // 1MB
 export class DocumentModel {
@@ -23,7 +23,7 @@ export class DocumentModel {
         this.row.page = '';
     }
     get isFresh() {
-        return this.row.title !== '' && this.row.id.timestamp() > (Date.now() / 1000 - 24 * 3600);
+        return this.row.title !== '' && this.row.id.timestamp() > (Date.now() / 1000 - 3 * 24 * 3600);
     }
     toJSON() {
         return this.row;
@@ -40,7 +40,7 @@ export class DocumentModel {
         }
     }
     setContent(obj) {
-        this.row.content = encode(obj);
+        this.row.content = Buffer.from(encode(obj));
     }
     setHTML(str) {
         this.row.html = str.trim();

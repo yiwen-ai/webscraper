@@ -23,6 +23,23 @@ export function healthzAPI(ctx) {
         }
     };
 }
+export async function searchAPI(ctx) {
+    const db = ctx.app.context.db;
+    const { url } = ctx.request.query;
+    if (!isValidUrl(url)) {
+        ctx.throw(400, format('Invalid scraping URL: %s', url));
+    }
+    const doc = await DocumentModel.findLatest(db, url);
+    if (doc.row.title != null && doc.row.title != "") {
+        try {
+            await doc.fill(db, ['src', 'meta', 'content']);
+        }
+        catch (_) { }
+    }
+    ctx.body = {
+        result: doc.row
+    };
+}
 export async function scrapingAPI(ctx) {
     const db = ctx.app.context.db;
     const { url } = ctx.request.query;

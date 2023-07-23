@@ -64,7 +64,7 @@ export class DocumentModel {
   }
 
   setContent(obj: object): void {
-    this.row.content = encode(obj)
+    this.row.content = Buffer.from(encode(obj))
   }
 
   setHTML(str: string): void {
