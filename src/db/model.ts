@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import createError from 'http-errors'
 import { type Client } from 'cassandra-driver'
-import { encode } from 'cbor-x'
+import { encode } from 'cborg'
 import { Xid } from 'xid-ts'
 
 const MAX_CELL_SIZE = 1024 * 1024 - 1 // 1MB

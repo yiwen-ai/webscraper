@@ -1,7 +1,7 @@
 import { gzipSync } from 'node:zlib'
 import type Koa from 'koa'
 import Router from '@koa/router'
-import { encode } from 'cbor-x'
+import { encode } from 'cborg'
 
 import { LogLevel, createLog, writeLog } from './log.js'
 import { connect } from './db/scylladb.js'

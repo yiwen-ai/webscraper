@@ -1,6 +1,6 @@
 {
   "name": "webscraper",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "",
   "private": true,
   "main": "dist/main.js",
@@ -70,7 +70,7 @@
     "@tiptap/pm": "2.1.0-rc.12",
     "@yiwen-ai/zeed-dom": "^0.10.6",
     "cassandra-driver": "^4.6.4",
-    "cbor-x": "^1.5.3",
+    "cborg": "^2.0.3",
     "cheerio": "1.0.0-rc.12",
     "config": "^3.3.9",
     "crawlee": "^3.4.1",
