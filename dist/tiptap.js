@@ -95,28 +95,27 @@ const tiptapExtensions = [
     Typography,
     Underline,
     UniqueID.configure({
-        types: ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell']
+        attributeName: "id",
+        types: ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell'],
+        generateID: () => nanoid(6)
     }),
     Youtube.configure({
         inline: false
     })
 ];
-class JSONDocumentAmender {
+export class JSONDocumentAmender {
     ids;
     constructor() {
         this.ids = new Set();
     }
     amendId(id) {
-        if (typeof id === 'string' && id !== '') {
-            this.ids.add(id);
-        }
-        else {
+        if (typeof id !== 'string' || id === '') {
             id = nanoid(6);
-            while (this.ids.has(id)) {
-                id = nanoid(6);
-            }
-            this.ids.add(id);
         }
+        while (this.ids.has(id)) {
+            id = nanoid(6);
+        }
+        this.ids.add(id);
         return id;
     }
     // https://prosemirror.net/docs/ref/#model.Document_Structure
@@ -153,14 +152,13 @@ class JSONDocumentAmender {
         return node;
     }
 }
-export function parseHTMLDocument(html) {
+export function parseHTML(html) {
     const jsonDoc = generateJSON(html, tiptapExtensions);
     const amender = new JSONDocumentAmender();
-    const htmlDoc = generateHTML(amender.amendNode(jsonDoc), tiptapExtensions);
-    return {
-        json: jsonDoc,
-        html: htmlDoc
-    };
+    return amender.amendNode(jsonDoc);
+}
+export function toHTML(doc) {
+    return generateHTML(doc, tiptapExtensions);
 }
 const LOCALHOST = 'https://localhost';
 function isSameOriginHref(href) {

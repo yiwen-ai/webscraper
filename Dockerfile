@@ -1,4 +1,4 @@
-FROM apify/actor-node-playwright-chrome:20-1.36.1-beta
+FROM apify/actor-node-playwright-chrome:20-1.36.2-beta
 
 # the available images at https://crawlee.dev/docs/guides/docker-images
 # https://hub.docker.com/r/apify/actor-node-playwright-chrome/tags

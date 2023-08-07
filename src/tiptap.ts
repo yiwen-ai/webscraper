@@ -98,46 +98,47 @@ const tiptapExtensions = [
   Typography,
   Underline,
   UniqueID.configure({
-    types: ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell']
+    attributeName: "id",
+    types: ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell'],
+    generateID: () => nanoid(6)
   }),
   Youtube.configure({
     inline: false
   })
 ]
 
-interface PartialNode {
+export interface PartialNode {
   type: string
   attrs?: any
   text?: string
 }
 
-interface Node extends PartialNode {
+export interface Node extends PartialNode {
   marks?: PartialNode[]
   content?: Node[]
 }
 
-class JSONDocumentAmender {
+export class JSONDocumentAmender {
   ids: Set<string>
 
-  constructor () {
+  constructor() {
     this.ids = new Set()
   }
 
-  amendId (id: string): string {
-    if (typeof id === 'string' && id !== '') {
-      this.ids.add(id)
-    } else {
+  amendId(id: string): string {
+    if (typeof id !== 'string' || id === '') {
       id = nanoid(6)
-      while (this.ids.has(id)) {
-        id = nanoid(6)
-      }
-      this.ids.add(id)
     }
+
+    while (this.ids.has(id)) {
+      id = nanoid(6)
+    }
+    this.ids.add(id)
     return id
   }
 
   // https://prosemirror.net/docs/ref/#model.Document_Structure
-  amendNode (node: Node): any {
+  amendNode(node: Node): any {
     // attrs: Attrs
     if (node.attrs != null) {
       // tiptap BUG: generateJSON reuses some attrs object, we need to clone a new one.
@@ -174,35 +175,32 @@ class JSONDocumentAmender {
   }
 }
 
-export function parseHTMLDocument (html: string): {
-  json: any
-  html: string
-} {
+export function parseHTML(html: string): Node {
   const jsonDoc = generateJSON(html, tiptapExtensions)
   const amender = new JSONDocumentAmender()
-  const htmlDoc = generateHTML(amender.amendNode(jsonDoc as Node), tiptapExtensions)
-  return {
-    json: jsonDoc,
-    html: htmlDoc
-  }
+  return amender.amendNode(jsonDoc as Node)
+}
+
+export function toHTML(doc: Node): string {
+  return generateHTML(doc, tiptapExtensions)
 }
 
 const LOCALHOST = 'https://localhost'
-function isSameOriginHref (href: string): boolean {
+function isSameOriginHref(href: string): boolean {
   if (typeof href === 'string') {
     try {
       const url = new URL(href, LOCALHOST)
       return url.origin === LOCALHOST
-    } catch (e) {}
+    } catch (e) { }
   }
   return false
 }
-function isValidHref (href: string): boolean {
+function isValidHref(href: string): boolean {
   if (typeof href === 'string') {
     try {
       const url = new URL(href, LOCALHOST)
       return url.protocol === 'https:' || url.protocol === 'mailto:'
-    } catch (e) {}
+    } catch (e) { }
   }
   return false
 }

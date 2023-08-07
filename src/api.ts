@@ -3,10 +3,14 @@ import { URL } from 'node:url'
 import { type Context } from 'koa'
 import { Xid } from 'xid-ts'
 import cassandra from 'cassandra-driver'
+import contentType from 'content-type'
+import getRawBody from 'raw-body'
+import createError from 'http-errors'
 
 import { LogLevel, createLog, logError, writeLog } from './log.js'
 import { scraping } from './crawler.js'
-import { parseHTMLDocument } from './tiptap.js'
+import { parseHTML, toHTML } from './tiptap.js'
+import { getConverter } from './converting.js'
 import { DocumentModel } from './db/model.js'
 
 const serverStartAt = Date.now()
@@ -87,12 +91,13 @@ export async function scrapingAPI(ctx: Context): Promise<void> {
   log.xRequestID = ctx.state.log.xRequestID
 
   result.then(async (d) => {
-    const res = parseHTMLDocument(d.html)
+    const obj = parseHTML(d.html)
+    const html = toHTML(obj)
     doc.setTitle(d.title)
     doc.setMeta(d.meta)
     doc.setPage(d.page)
-    doc.setContent(res.json as object)
-    doc.setHTML(res.html)
+    doc.setContent(obj as object)
+    doc.setHTML(html)
 
     await doc.save(db)
 
@@ -100,7 +105,7 @@ export async function scrapingAPI(ctx: Context): Promise<void> {
     log.title = d.title
     log.meta = d.meta
     log.pageLength = d.page.length
-    log.htmlLength = res.html.length
+    log.htmlLength = html.length
     log.cborLength = doc.row.content?.length
     log.elapsed = Date.now() - log.start
     writeLog(log)
@@ -144,6 +149,23 @@ export async function documentAPI(ctx: Context): Promise<void> {
 
   ctx.body = {
     result: doc.row
+  }
+}
+
+export async function convertingAPI(ctx: Context): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  const ct = contentType.parse(ctx.get('content-type'))
+  const converter = getConverter(ct.type)
+  const buf = await getRawBody(ctx.req, { limit: '500kb' })
+
+  try {
+    const doc = await converter(buf)
+
+    ctx.body = {
+      result: doc
+    }
+  } catch (err) {
+    throw createError(400, err as createError.UnknownError)
   }
 }
 

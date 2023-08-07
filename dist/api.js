@@ -1,9 +1,13 @@
 import { format } from 'node:util';
 import { URL } from 'node:url';
 import { Xid } from 'xid-ts';
+import contentType from 'content-type';
+import getRawBody from 'raw-body';
+import createError from 'http-errors';
 import { LogLevel, createLog, logError, writeLog } from './log.js';
 import { scraping } from './crawler.js';
-import { parseHTMLDocument } from './tiptap.js';
+import { parseHTML, toHTML } from './tiptap.js';
+import { getConverter } from './converting.js';
 import { DocumentModel } from './db/model.js';
 const serverStartAt = Date.now();
 export function versionAPI(ctx) {
@@ -72,18 +76,19 @@ export async function scrapingAPI(ctx) {
     log.action = 'scraping';
     log.xRequestID = ctx.state.log.xRequestID;
     result.then(async (d) => {
-        const res = parseHTMLDocument(d.html);
+        const obj = parseHTML(d.html);
+        const html = toHTML(obj);
         doc.setTitle(d.title);
         doc.setMeta(d.meta);
         doc.setPage(d.page);
-        doc.setContent(res.json);
-        doc.setHTML(res.html);
+        doc.setContent(obj);
+        doc.setHTML(html);
         await doc.save(db);
         log.url = d.url;
         log.title = d.title;
         log.meta = d.meta;
         log.pageLength = d.page.length;
-        log.htmlLength = res.html.length;
+        log.htmlLength = html.length;
         log.cborLength = doc.row.content?.length;
         log.elapsed = Date.now() - log.start;
         writeLog(log);
@@ -123,6 +128,21 @@ export async function documentAPI(ctx) {
     ctx.body = {
         result: doc.row
     };
+}
+export async function convertingAPI(ctx) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    const ct = contentType.parse(ctx.get('content-type'));
+    const converter = getConverter(ct.type);
+    const buf = await getRawBody(ctx.req, { limit: '500kb' });
+    try {
+        const doc = await converter(buf);
+        ctx.body = {
+            result: doc
+        };
+    }
+    catch (err) {
+        throw createError(400, err);
+    }
 }
 function isValidUrl(url) {
     if (typeof url === 'string' && url.startsWith('https://')) {

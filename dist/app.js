@@ -3,7 +3,7 @@ import Router from '@koa/router';
 import { encode } from 'cborg';
 import { LogLevel, createLog, writeLog } from './log.js';
 import { connect } from './db/scylladb.js';
-import { versionAPI, healthzAPI, scrapingAPI, searchAPI, documentAPI } from './api.js';
+import { versionAPI, healthzAPI, scrapingAPI, searchAPI, documentAPI, convertingAPI } from './api.js';
 const GZIP_MIN_LENGTH = 128;
 export async function initApp(app) {
     // attach stateful components to the application context
@@ -16,6 +16,7 @@ export async function initApp(app) {
     router.get('/v1/scraping', scrapingAPI);
     router.get('/v1/search', searchAPI);
     router.get('/v1/document', documentAPI);
+    router.post('/v1/converting', convertingAPI);
     app.use(router.routes());
     app.use(router.allowedMethods());
 }
