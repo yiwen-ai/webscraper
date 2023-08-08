@@ -1,8 +1,8 @@
 import { encode } from 'cborg'
 import createError from 'http-errors'
 import { marked } from 'marked'
-// import { getDocument } from 'pdfjs-dist'
-// import { type TextItem } from 'pdfjs-dist/types/src/display/api'
+import pdfjs from 'pdfjs-dist'
+import { type TextItem } from 'pdfjs-dist/types/src/display/api'
 
 import { parseHTML, Node, JSONDocumentAmender } from './tiptap.js'
 
@@ -16,10 +16,10 @@ export function getConverter(mime: string): converter {
       return convertMarkdown
     case 'text/x-markdown':
       return convertMarkdown
-    // case 'application/pdf':
-    //   return convertPdf
-    // case 'application/x-pdf':
-    //   return convertPdf
+    case 'application/pdf':
+      return convertPdf
+    case 'application/x-pdf':
+      return convertPdf
     case 'text/plain':
       return convertText
     default:
@@ -39,50 +39,50 @@ function convertMarkdown(buf: Buffer): Promise<Buffer> {
   return Promise.resolve(Buffer.from(encode(doc)))
 }
 
-// async function convertPdf(buf: Buffer): Promise<Buffer> {
-//   const doc = await getDocument(buf).promise
-//   const node: Node = Object.create(null)
-//   node.type = 'doc'
-//   node.content = []
-//   for (let i = 1; i <= doc.numPages; i++) {
-//     const page = await doc.getPage(i)
-//     const content = await page.getTextContent()
-//     let child: Node = Object.create(null)
-//     child.type = 'paragraph'
-//     child.content = []
+async function convertPdf(buf: Buffer): Promise<Buffer> {
+  const doc = await pdfjs.getDocument(new Uint8Array(buf)).promise
+  const node: Node = Object.create(null)
+  node.type = 'doc'
+  node.content = []
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i)
+    const content = await page.getTextContent()
+    let child: Node = Object.create(null)
+    child.type = 'paragraph'
+    child.content = []
 
-//     for (let item of content.items) {
-//       item = item as TextItem
-//       if (item.str == null || item.str.length === 0) {
-//         continue
-//       }
+    for (let item of content.items) {
+      item = item as TextItem
+      if (item.str == null || item.str.length === 0) {
+        continue
+      }
 
-//       let text = item.str
-//       if (item.dir === 'ttb') {
-//         text = text.replace(/\n/g, ' ')
-//       }
-//       child.content.push({
-//         type: 'text',
-//         text
-//       })
-//       if (item.hasEOL) {
-//         node.content.push(child)
-//         child = Object.create(null)
-//         child.type = 'paragraph'
-//         child.content = []
-//       }
-//     }
+      let text = item.str
+      if (item.dir === 'ttb') {
+        text = text.replace(/\n/g, ' ')
+      }
+      child.content.push({
+        type: 'text',
+        text
+      })
+      if (item.hasEOL) {
+        node.content.push(child)
+        child = Object.create(null)
+        child.type = 'paragraph'
+        child.content = []
+      }
+    }
 
-//     if (child.content.length > 0) {
-//       node.content.push(child)
-//     }
+    if (child.content.length > 0) {
+      node.content.push(child)
+    }
 
-//     page.cleanup()
-//   }
+    page.cleanup()
+  }
 
-//   const amender = new JSONDocumentAmender()
-//   return Promise.resolve(Buffer.from(encode(amender.amendNode(node))))
-// }
+  const amender = new JSONDocumentAmender()
+  return Promise.resolve(Buffer.from(encode(amender.amendNode(node))))
+}
 
 function convertText(buf: Buffer): Promise<Buffer> {
   const texts = buf.toString('utf8').split(/\r\n|\r|\n/)
