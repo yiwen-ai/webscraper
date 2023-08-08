@@ -160,7 +160,7 @@ export async function convertingAPI(ctx: Context): Promise<void> {
 
   try {
     const doc = await converter(buf)
-
+    // console.log(Buffer.from(doc).toString('hex'))
     ctx.body = {
       result: doc
     }

@@ -136,6 +136,7 @@ export async function convertingAPI(ctx) {
     const buf = await getRawBody(ctx.req, { limit: '500kb' });
     try {
         const doc = await converter(buf);
+        // console.log(Buffer.from(doc).toString('hex'))
         ctx.body = {
             result: doc
         };

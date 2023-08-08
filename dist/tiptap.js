@@ -40,6 +40,7 @@ import { Emoji, emojis } from '@tiptap-pro/extension-emoji';
 import { UniqueID } from '@tiptap-pro/extension-unique-id';
 import { Mathematics } from '@tiptap-pro/extension-mathematics';
 // import { writeFileSync } from 'node:fs'
+const uidTypes = ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell'];
 const tiptapExtensions = [
     Document,
     Details.configure({
@@ -96,7 +97,7 @@ const tiptapExtensions = [
     Underline,
     UniqueID.configure({
         attributeName: "id",
-        types: ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell'],
+        types: uidTypes,
         generateID: () => nanoid(6)
     }),
     Youtube.configure({
@@ -121,10 +122,13 @@ export class JSONDocumentAmender {
     // https://prosemirror.net/docs/ref/#model.Document_Structure
     amendNode(node) {
         // attrs: Attrs
-        if (node.attrs != null) {
+        if (uidTypes.includes(node.type) && node.attrs == null) {
+            node.attrs = { id: this.amendId('') };
+        }
+        else if (node.attrs != null) {
             // tiptap BUG: generateJSON reuses some attrs object, we need to clone a new one.
             node.attrs = Object.assign({}, node.attrs);
-            if (Object.hasOwn(node.attrs, 'id')) {
+            if (uidTypes.includes(node.type)) {
                 node.attrs.id = this.amendId(node.attrs.id);
             }
         }
