@@ -1,12 +1,13 @@
 import { format } from 'node:util';
 import { URL } from 'node:url';
 import { Xid } from 'xid-ts';
+import { encode } from 'cborg';
 import contentType from 'content-type';
 import getRawBody from 'raw-body';
 import createError from 'http-errors';
 import { LogLevel, createLog, logError, writeLog } from './log.js';
 import { scraping } from './crawler.js';
-import { parseHTML, toHTML } from './tiptap.js';
+import { parseHTML, toHTML, findTitle } from './tiptap.js';
 import { getConverter } from './converting.js';
 import { DocumentModel } from './db/model.js';
 const serverStartAt = Date.now();
@@ -135,8 +136,22 @@ export async function convertingAPI(ctx) {
     const converter = getConverter(ct.type);
     const buf = await getRawBody(ctx.req, { limit: '500kb' });
     try {
-        const doc = await converter(buf);
+        const content = await converter(buf);
         // console.log(Buffer.from(doc).toString('hex'))
+        let title = findTitle(content, 1);
+        if (title === '') {
+            title = findTitle(content, 2);
+        }
+        const doc = {
+            id: new Xid(),
+            url: "",
+            src: "",
+            title: title,
+            meta: {},
+            content: Buffer.from(encode(content)),
+            html: "",
+            page: ""
+        };
         ctx.body = {
             result: doc
         };

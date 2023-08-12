@@ -188,6 +188,28 @@ export function toHTML(doc: Node): string {
   return generateHTML(doc, tiptapExtensions)
 }
 
+export function findTitle(doc: Node, level: number): string {
+  if (doc.type === 'heading') {
+    if (doc.attrs.level === level && doc.content != null) {
+      const texts: string[] = []
+      for (const child of doc.content) {
+        if (child.type === 'text') {
+          texts.push(child.text!)
+        }
+      }
+      return texts.join(' ')
+    }
+  } else if (doc.content != null) {
+    for (const child of doc.content) {
+      const title = findTitle(child, level)
+      if (title !== '') {
+        return title
+      }
+    }
+  }
+  return ''
+}
+
 const LOCALHOST = 'https://localhost'
 function isSameOriginHref(href: string): boolean {
   if (typeof href === 'string') {

@@ -164,6 +164,28 @@ export function parseHTML(html) {
 export function toHTML(doc) {
     return generateHTML(doc, tiptapExtensions);
 }
+export function findTitle(doc, level) {
+    if (doc.type === 'heading') {
+        if (doc.attrs.level === level && doc.content != null) {
+            const texts = [];
+            for (const child of doc.content) {
+                if (child.type === 'text') {
+                    texts.push(child.text);
+                }
+            }
+            return texts.join(' ');
+        }
+    }
+    else if (doc.content != null) {
+        for (const child of doc.content) {
+            const title = findTitle(child, level);
+            if (title !== '') {
+                return title;
+            }
+        }
+    }
+    return '';
+}
 const LOCALHOST = 'https://localhost';
 function isSameOriginHref(href) {
     if (typeof href === 'string') {

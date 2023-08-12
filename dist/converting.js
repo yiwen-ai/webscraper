@@ -1,4 +1,3 @@
-import { encode } from 'cborg';
 import createError from 'http-errors';
 import { marked } from 'marked';
 import pdfjs from 'pdfjs-dist';
@@ -24,12 +23,12 @@ export function getConverter(mime) {
 function convertHtml(buf) {
     const html = buf.toString('utf8');
     const doc = parseHTML(html);
-    return Promise.resolve(Buffer.from(encode(doc)));
+    return Promise.resolve(doc);
 }
 function convertMarkdown(buf) {
     const html = marked.parse(buf.toString('utf8'));
     const doc = parseHTML(html);
-    return Promise.resolve(Buffer.from(encode(doc)));
+    return Promise.resolve(doc);
 }
 async function convertPdf(buf) {
     const doc = await pdfjs.getDocument(new Uint8Array(buf)).promise;
@@ -49,6 +48,7 @@ async function convertPdf(buf) {
         hl.finalize();
         let texts = [];
         let height = 0;
+        let prevNode = null;
         for (let item of content.items) {
             item = item;
             if (item.str == null) {
@@ -67,16 +67,23 @@ async function convertPdf(buf) {
             if (item.hasEOL) {
                 const level = hl.level(height);
                 if (level == 0) {
-                    node.content.push({
+                    prevNode = {
                         type: 'paragraph',
                         content: [{
                                 type: 'text',
                                 text: texts.join('')
                             }]
+                    };
+                    node.content.push(prevNode);
+                }
+                else if (prevNode != null && prevNode.type === 'heading' && prevNode.attrs.level === level) {
+                    prevNode.content.push({
+                        type: 'text',
+                        text: texts.join('')
                     });
                 }
                 else {
-                    node.content.push({
+                    prevNode = {
                         type: "heading",
                         attrs: {
                             id: null,
@@ -86,7 +93,8 @@ async function convertPdf(buf) {
                                 type: 'text',
                                 text: texts.join('')
                             }]
-                    });
+                    };
+                    node.content.push(prevNode);
                 }
                 texts = [];
                 height = 0;
@@ -104,7 +112,7 @@ async function convertPdf(buf) {
         page.cleanup();
     }
     const amender = new JSONDocumentAmender();
-    return Promise.resolve(Buffer.from(encode(amender.amendNode(node))));
+    return Promise.resolve(amender.amendNode(node));
 }
 function convertText(buf) {
     const texts = buf.toString('utf8').split(/\r\n|\r|\n/);
@@ -125,7 +133,7 @@ function convertText(buf) {
         });
     }
     const amender = new JSONDocumentAmender();
-    return Promise.resolve(Buffer.from(encode(amender.amendNode(node))));
+    return Promise.resolve(amender.amendNode(node));
 }
 export class HeadingLevel {
     sample;

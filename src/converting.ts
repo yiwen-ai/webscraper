@@ -1,4 +1,3 @@
-import { encode } from 'cborg'
 import createError from 'http-errors'
 import { marked } from 'marked'
 import pdfjs from 'pdfjs-dist'
@@ -6,7 +5,7 @@ import { type TextItem } from 'pdfjs-dist/types/src/display/api'
 
 import { parseHTML, Node, JSONDocumentAmender } from './tiptap.js'
 
-export type converter = (buf: Buffer) => Promise<Buffer>
+export type converter = (buf: Buffer) => Promise<Node>
 
 export function getConverter(mime: string): converter {
   switch (mime) {
@@ -27,19 +26,19 @@ export function getConverter(mime: string): converter {
   }
 }
 
-function convertHtml(buf: Buffer): Promise<Buffer> {
+function convertHtml(buf: Buffer): Promise<Node> {
   const html = buf.toString('utf8')
   const doc = parseHTML(html)
-  return Promise.resolve(Buffer.from(encode(doc)))
+  return Promise.resolve(doc)
 }
 
-function convertMarkdown(buf: Buffer): Promise<Buffer> {
+function convertMarkdown(buf: Buffer): Promise<Node> {
   const html = marked.parse(buf.toString('utf8'))
   const doc = parseHTML(html)
-  return Promise.resolve(Buffer.from(encode(doc)))
+  return Promise.resolve(doc)
 }
 
-async function convertPdf(buf: Buffer): Promise<Buffer> {
+async function convertPdf(buf: Buffer): Promise<Node> {
   const doc = await pdfjs.getDocument(new Uint8Array(buf)).promise
   const node: Node = Object.create(null)
   node.type = 'doc'
@@ -59,6 +58,7 @@ async function convertPdf(buf: Buffer): Promise<Buffer> {
 
     let texts = []
     let height = 0
+    let prevNode = null
     for (let item of content.items) {
       item = item as TextItem
       if (item.str == null) {
@@ -80,16 +80,23 @@ async function convertPdf(buf: Buffer): Promise<Buffer> {
 
       if (item.hasEOL) {
         const level = hl.level(height)
+
         if (level == 0) {
-          node.content.push({
+          prevNode = {
             type: 'paragraph',
             content: [{
               type: 'text',
               text: texts.join('')
             }]
+          }
+          node.content.push(prevNode)
+        } else if (prevNode != null && prevNode.type === 'heading' && prevNode.attrs!.level === level) {
+          prevNode.content.push({
+            type: 'text',
+            text: texts.join('')
           })
         } else {
-          node.content.push({
+          prevNode = {
             type: "heading",
             attrs: {
               id: null,
@@ -99,8 +106,10 @@ async function convertPdf(buf: Buffer): Promise<Buffer> {
               type: 'text',
               text: texts.join('')
             }]
-          })
+          }
+          node.content.push(prevNode)
         }
+
         texts = []
         height = 0
       }
@@ -120,10 +129,10 @@ async function convertPdf(buf: Buffer): Promise<Buffer> {
   }
 
   const amender = new JSONDocumentAmender()
-  return Promise.resolve(Buffer.from(encode(amender.amendNode(node))))
+  return Promise.resolve(amender.amendNode(node))
 }
 
-function convertText(buf: Buffer): Promise<Buffer> {
+function convertText(buf: Buffer): Promise<Node> {
   const texts = buf.toString('utf8').split(/\r\n|\r|\n/)
   const node: Node = Object.create(null)
   node.type = 'doc'
@@ -143,7 +152,7 @@ function convertText(buf: Buffer): Promise<Buffer> {
   }
 
   const amender = new JSONDocumentAmender()
-  return Promise.resolve(Buffer.from(encode(amender.amendNode(node))))
+  return Promise.resolve(amender.amendNode(node))
 }
 
 export class HeadingLevel {
