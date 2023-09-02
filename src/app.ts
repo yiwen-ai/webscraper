@@ -97,7 +97,7 @@ async function initContext(ctx: Koa.Context, next: Koa.Next): Promise<void> {
   let body: any = ctx.body
   if (body != null && typeof body === 'object') {
     if (acceptCBOR) {
-      body = encode(body)
+      body = Buffer.from(encode(body))
       ctx.set('content-length', String(body.length))
       ctx.set('content-type', 'application/cbor')
     } else {

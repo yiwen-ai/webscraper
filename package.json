@@ -1,6 +1,6 @@
 {
   "name": "webscraper",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "",
   "private": true,
   "main": "dist/main.js",

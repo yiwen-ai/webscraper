@@ -80,7 +80,7 @@ async function initContext(ctx, next) {
     let body = ctx.body;
     if (body != null && typeof body === 'object') {
         if (acceptCBOR) {
-            body = encode(body);
+            body = Buffer.from(encode(body));
             ctx.set('content-length', String(body.length));
             ctx.set('content-type', 'application/cbor');
         }
