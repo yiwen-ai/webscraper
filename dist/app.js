@@ -3,7 +3,7 @@ import Router from '@koa/router';
 import { encode } from 'cborg';
 import { LogLevel, createLog, writeLog } from './log.js';
 import { connect } from './db/scylladb.js';
-import { versionAPI, healthzAPI, scrapingAPI, searchAPI, documentAPI, convertingAPI } from './api.js';
+import { versionAPI, healthzAPI, scrapingAPI, searchAPI, documentAPI, convertingAPI, } from './api.js';
 const GZIP_MIN_LENGTH = 128;
 export async function initApp(app) {
     // attach stateful components to the application context
@@ -22,7 +22,8 @@ export async function initApp(app) {
 }
 async function initContext(ctx, next) {
     const start = Date.now();
-    const acceptCBOR = ctx.get('accept').toLowerCase().includes('cbor') || ctx.get('content-type').toLowerCase().includes('cbor');
+    const acceptCBOR = ctx.get('accept').toLowerCase().includes('cbor') ||
+        ctx.get('content-type').toLowerCase().includes('cbor');
     // initialize the log object
     const log = createLog(start);
     log.accept = ctx.get('accept');
@@ -56,8 +57,8 @@ async function initContext(ctx, next) {
             error: {
                 code: err.code,
                 message: err.message,
-                data: err.data
-            }
+                data: err.data,
+            },
         };
     }
     finally {
@@ -89,7 +90,8 @@ async function initContext(ctx, next) {
             ctx.set('content-length', String(body.length));
             ctx.set('content-type', 'application/json');
         }
-        if (body.length > GZIP_MIN_LENGTH && ctx.acceptsEncodings('gzip') === 'gzip') {
+        if (body.length > GZIP_MIN_LENGTH &&
+            ctx.acceptsEncodings('gzip') === 'gzip') {
             log.beforeGzip = body.length;
             body = gzipSync(body);
             ctx.remove('Content-Length');

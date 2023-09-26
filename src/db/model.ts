@@ -43,7 +43,10 @@ export class DocumentModel {
   }
 
   get isFresh(): boolean {
-    return this.row.title !== '' && this.row.id.timestamp() > (Date.now() / 1000 - 3 * 24 * 3600)
+    return (
+      this.row.title !== '' &&
+      this.row.id.timestamp() > Date.now() / 1000 - 3 * 24 * 3600
+    )
   }
 
   toJSON(): Document {
@@ -75,15 +78,30 @@ export class DocumentModel {
     this.row.page = str.trim()
   }
 
-  async fill(cli: Client, selectColumns: string[] = ['url', 'src', 'title', 'meta', 'content', 'html', 'page']): Promise<void> {
-    const query = `SELECT ${selectColumns.join(',')} FROM doc WHERE id=? LIMIT 1`
+  async fill(
+    cli: Client,
+    selectColumns: string[] = [
+      'url',
+      'src',
+      'title',
+      'meta',
+      'content',
+      'html',
+      'page',
+    ]
+  ): Promise<void> {
+    const query = `SELECT ${selectColumns.join(
+      ','
+    )} FROM doc WHERE id=? LIMIT 1`
     const params = [Buffer.from(this.row.id)] // find the document in a hour.
 
     const result = await cli.execute(query, params, { prepare: true })
     const row = result.first()
     if (row == null) {
       const name = this.row.src !== '' ? this.row.src : this.row.id.toString()
-      throw createError(404, `fill document ${name} not found`, { expose: true })
+      throw createError(404, `fill document ${name} not found`, {
+        expose: true,
+      })
     }
 
     // @ts-expect-error: should ignore
@@ -95,7 +113,8 @@ export class DocumentModel {
   }
 
   async acquire(cli: Client): Promise<boolean> {
-    const query = 'INSERT INTO doc (id,url) VALUES (?,?) IF NOT EXISTS USING TTL 60'
+    const query =
+      'INSERT INTO doc (id,url) VALUES (?,?) IF NOT EXISTS USING TTL 60'
     const params = [Buffer.from(this.row.id), this.row.url]
 
     const result = await cli.execute(query, params, { prepare: true })
@@ -120,12 +139,17 @@ export class DocumentModel {
       throw new Error('Document content is null')
     }
 
-    if (Buffer.byteLength(this.row.page, 'utf8') > MAX_CELL_SIZE || this.row.content.length > MAX_CELL_SIZE) {
+    if (
+      Buffer.byteLength(this.row.page, 'utf8') > MAX_CELL_SIZE ||
+      this.row.content.length > MAX_CELL_SIZE
+    ) {
       throw createError(400, `document ${this.row.src} is too large`)
     }
 
     const columns = DocumentModel.columns
-    const query = `INSERT INTO doc (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')}) USING TTL 0`
+    const query = `INSERT INTO doc (${columns.join(',')}) VALUES (${columns
+      .map(() => '?')
+      .join(',')}) USING TTL 0`
 
     // @ts-expect-error: should ignore
     const params = columns.map((c) => this.row[c])

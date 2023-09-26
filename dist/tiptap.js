@@ -8,7 +8,7 @@ import Document from '@tiptap/extension-document';
 import Blockquote from '@tiptap/extension-blockquote';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
-import FontFamily from '@tiptap/extension-font-family';
+// import FontFamily from '@tiptap/extension-font-family'
 import HardBreak from '@tiptap/extension-hard-break';
 import Heading from '@tiptap/extension-heading';
 import HorizontalRule from '@tiptap/extension-horizontal-rule';
@@ -40,26 +40,34 @@ import { Emoji, emojis } from '@tiptap-pro/extension-emoji';
 import { UniqueID } from '@tiptap-pro/extension-unique-id';
 import { Mathematics } from '@tiptap-pro/extension-mathematics';
 // import { writeFileSync } from 'node:fs'
-const uidTypes = ['blockquote', 'codeBlock', 'detailsSummary', 'detailsContent', 'heading', 'listItem', 'paragraph', 'tableHeader', 'tableCell'];
+const uidTypes = [
+    'blockquote',
+    'codeBlock',
+    'detailsSummary',
+    'detailsContent',
+    'heading',
+    'listItem',
+    'paragraph',
+    'tableHeader',
+    'tableCell',
+];
 const tiptapExtensions = [
     Document,
     Details.configure({
-        persist: true
+        persist: true,
     }),
     DetailsSummary,
     DetailsContent,
     Emoji.configure({
         enableEmoticons: true,
-        emojis: [
-            ...emojis
-        ]
+        emojis: [...emojis],
     }),
     Color,
     Bold,
     Blockquote,
     Code,
     CodeBlock,
-    FontFamily,
+    // FontFamily,
     HardBreak,
     Heading,
     HorizontalRule,
@@ -72,8 +80,8 @@ const tiptapExtensions = [
         validate: isValidHref,
         HTMLAttributes: {
             rel: '',
-            target: ''
-        }
+            target: '',
+        },
     }),
     ListItem,
     Mathematics,
@@ -87,7 +95,7 @@ const tiptapExtensions = [
     TableHeader,
     TableRow,
     TaskItem.configure({
-        nested: true
+        nested: true,
     }),
     TaskList,
     Text,
@@ -96,13 +104,13 @@ const tiptapExtensions = [
     Typography,
     Underline,
     UniqueID.configure({
-        attributeName: "id",
+        attributeName: 'id',
         types: uidTypes,
-        generateID: () => nanoid(6)
+        generateID: () => nanoid(6),
     }),
     Youtube.configure({
-        inline: false
-    })
+        inline: false,
+    }),
 ];
 export class JSONDocumentAmender {
     ids;

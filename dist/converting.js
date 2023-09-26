@@ -69,30 +69,36 @@ async function convertPdf(buf) {
                 if (level == 0) {
                     prevNode = {
                         type: 'paragraph',
-                        content: [{
+                        content: [
+                            {
                                 type: 'text',
-                                text: texts.join('')
-                            }]
+                                text: texts.join(''),
+                            },
+                        ],
                     };
                     node.content.push(prevNode);
                 }
-                else if (prevNode != null && prevNode.type === 'heading' && prevNode.attrs.level === level) {
+                else if (prevNode != null &&
+                    prevNode.type === 'heading' &&
+                    prevNode.attrs.level === level) {
                     prevNode.content.push({
                         type: 'text',
-                        text: texts.join('')
+                        text: texts.join(''),
                     });
                 }
                 else {
                     prevNode = {
-                        type: "heading",
+                        type: 'heading',
                         attrs: {
                             id: null,
                             level,
                         },
-                        content: [{
+                        content: [
+                            {
                                 type: 'text',
-                                text: texts.join('')
-                            }]
+                                text: texts.join(''),
+                            },
+                        ],
                     };
                     node.content.push(prevNode);
                 }
@@ -103,10 +109,12 @@ async function convertPdf(buf) {
         if (texts.length > 0) {
             node.content.push({
                 type: 'paragraph',
-                content: [{
+                content: [
+                    {
                         type: 'text',
-                        text: texts.join('')
-                    }]
+                        text: texts.join(''),
+                    },
+                ],
             });
         }
         page.cleanup();
@@ -126,10 +134,12 @@ function convertText(buf) {
         }
         node.content.push({
             type: 'paragraph',
-            content: [{
+            content: [
+                {
                     type: 'text',
-                    text: txt
-                }]
+                    text: txt,
+                },
+            ],
         });
     }
     const amender = new JSONDocumentAmender();

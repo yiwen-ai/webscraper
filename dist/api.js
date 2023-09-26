@@ -14,8 +14,8 @@ const serverStartAt = Date.now();
 export function versionAPI(ctx) {
     ctx.body = {
         result: {
-            name: 'webscraper'
-        }
+            name: 'webscraper',
+        },
     };
 }
 export function healthzAPI(ctx) {
@@ -25,7 +25,7 @@ export function healthzAPI(ctx) {
         result: {
             start: serverStartAt,
             scylla: s.toString(),
-        }
+        },
     };
 }
 export async function searchAPI(ctx) {
@@ -35,14 +35,14 @@ export async function searchAPI(ctx) {
         ctx.throw(400, format('Invalid scraping URL: %s', url));
     }
     const doc = await DocumentModel.findLatest(db, url);
-    if (doc.row.title != null && doc.row.title != "") {
+    if (doc.row.title != null && doc.row.title != '') {
         try {
             await doc.fill(db, ['src', 'meta', 'content']);
         }
         catch (_) { }
     }
     ctx.body = {
-        result: doc.row
+        result: doc.row,
     };
 }
 export async function scrapingAPI(ctx) {
@@ -56,7 +56,7 @@ export async function scrapingAPI(ctx) {
         // a fresh document is a document that has been scraped within the last 3600 seconds
         ctx.body = {
             retry: 0,
-            result: doc.toJSON()
+            result: doc.toJSON(),
         };
         return;
     }
@@ -67,8 +67,8 @@ export async function scrapingAPI(ctx) {
             retry: 1,
             result: {
                 id: doc.row.id,
-                url: doc.row.url
-            }
+                url: doc.row.url,
+            },
         };
         return;
     }
@@ -76,7 +76,8 @@ export async function scrapingAPI(ctx) {
     const log = createLog(ctx.state.log.start, LogLevel.Info);
     log.action = 'scraping';
     log.xRequestID = ctx.state.log.xRequestID;
-    result.then(async (d) => {
+    result
+        .then(async (d) => {
         const obj = parseHTML(d.html);
         const html = toHTML(obj);
         doc.setTitle(d.title);
@@ -93,7 +94,8 @@ export async function scrapingAPI(ctx) {
         log.cborLength = doc.row.content?.length;
         log.elapsed = Date.now() - log.start;
         writeLog(log);
-    }).catch(async (err) => {
+    })
+        .catch(async (err) => {
         // remove the partially saved document if scraping failed
         // so other requests can retry scraping
         await doc.release(db);
@@ -103,8 +105,8 @@ export async function scrapingAPI(ctx) {
         retry: 2,
         result: {
             id: doc.row.id,
-            url: doc.row.url
-        }
+            url: doc.row.url,
+        },
     };
 }
 export async function documentAPI(ctx) {
@@ -119,7 +121,8 @@ export async function documentAPI(ctx) {
     }
     const doc = new DocumentModel(xid);
     let selectColumns = ['url', 'src', 'title', 'meta', 'content'];
-    if (output === 'basic') { // 'basic', 'detail', 'full'
+    if (output === 'basic') {
+        // 'basic', 'detail', 'full'
         selectColumns = ['url', 'src', 'title', 'meta'];
     }
     else if (output === 'full') {
@@ -127,14 +130,14 @@ export async function documentAPI(ctx) {
     }
     await doc.fill(db, selectColumns);
     ctx.body = {
-        result: doc.row
+        result: doc.row,
     };
 }
 export async function convertingAPI(ctx) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const ct = contentType.parse(ctx.get('content-type'));
     const converter = getConverter(ct.type);
-    const buf = await getRawBody(ctx.req, { limit: '500kb' });
+    const buf = await getRawBody(ctx.req, { limit: '1024kb' });
     try {
         const content = await converter(buf);
         // console.log(Buffer.from(doc).toString('hex'))
@@ -144,16 +147,16 @@ export async function convertingAPI(ctx) {
         }
         const doc = {
             id: new Xid(),
-            url: "",
-            src: "",
+            url: '',
+            src: '',
             title: title,
             meta: {},
             content: Buffer.from(encode(content)),
-            html: "",
-            page: ""
+            html: '',
+            page: '',
         };
         ctx.body = {
-            result: doc
+            result: doc,
         };
     }
     catch (err) {

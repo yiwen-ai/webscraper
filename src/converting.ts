@@ -84,28 +84,36 @@ async function convertPdf(buf: Buffer): Promise<Node> {
         if (level == 0) {
           prevNode = {
             type: 'paragraph',
-            content: [{
-              type: 'text',
-              text: texts.join('')
-            }]
+            content: [
+              {
+                type: 'text',
+                text: texts.join(''),
+              },
+            ],
           }
           node.content.push(prevNode)
-        } else if (prevNode != null && prevNode.type === 'heading' && prevNode.attrs!.level === level) {
+        } else if (
+          prevNode != null &&
+          prevNode.type === 'heading' &&
+          prevNode.attrs!.level === level
+        ) {
           prevNode.content.push({
             type: 'text',
-            text: texts.join('')
+            text: texts.join(''),
           })
         } else {
           prevNode = {
-            type: "heading",
+            type: 'heading',
             attrs: {
               id: null,
               level,
             },
-            content: [{
-              type: 'text',
-              text: texts.join('')
-            }]
+            content: [
+              {
+                type: 'text',
+                text: texts.join(''),
+              },
+            ],
           }
           node.content.push(prevNode)
         }
@@ -118,10 +126,12 @@ async function convertPdf(buf: Buffer): Promise<Node> {
     if (texts.length > 0) {
       node.content.push({
         type: 'paragraph',
-        content: [{
-          type: 'text',
-          text: texts.join('')
-        }]
+        content: [
+          {
+            type: 'text',
+            text: texts.join(''),
+          },
+        ],
       })
     }
 
@@ -144,10 +154,12 @@ function convertText(buf: Buffer): Promise<Node> {
     }
     node.content.push({
       type: 'paragraph',
-      content: [{
-        type: 'text',
-        text: txt
-      }]
+      content: [
+        {
+          type: 'text',
+          text: txt,
+        },
+      ],
     })
   }
 

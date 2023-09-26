@@ -18,7 +18,10 @@ export async function scraping(url) {
                 return;
             }
             function getCheerioText($el) {
-                return $el.map((_i, el) => $(el).text().trim()).toArray().join(' ');
+                return $el
+                    .map((_i, el) => $(el).text().trim())
+                    .toArray()
+                    .join(' ');
             }
             const doc = {
                 src: request.url,
@@ -26,7 +29,7 @@ export async function scraping(url) {
                 title: getCheerioText(articleTitle),
                 meta: {},
                 html: '',
-                page: $.html()
+                page: $.html(),
             };
             $('head > meta').each((_i, el) => {
                 const property = el.attribs?.property;
@@ -35,7 +38,8 @@ export async function scraping(url) {
                     if (property === 'og:title') {
                         doc.title = content.trim();
                     }
-                    else if (property.startsWith('og:') || property.startsWith('article:')) {
+                    else if (property.startsWith('og:') ||
+                        property.startsWith('article:')) {
                         doc.meta[property.trim()] = content.trim();
                     }
                 }
@@ -53,22 +57,26 @@ export async function scraping(url) {
             resolve(doc);
         },
         failedRequestHandler: ({ request }) => {
-            const msg = request.errorMessages.map((str) => {
+            const msg = request.errorMessages
+                .map((str) => {
                 let i = str.indexOf('\n');
                 if (i === -1)
                     i = str.length;
                 return str.slice(0, i).trim();
-            }).join(', ');
+            })
+                .join(', ');
             reject(scrapingErr(msg, request));
-        }
+        },
     });
     const rt = await crawler.addRequests([url]);
-    crawler.run([]).catch((err) => { reject(err); });
+    crawler.run([]).catch((err) => {
+        reject(err);
+    });
     const { requestId, uniqueKey } = rt.addedRequests[0];
     return {
         requestId,
         uniqueKey,
-        result: promise
+        result: promise,
     };
 }
 function scrapingErr(msg, req) {
@@ -78,7 +86,7 @@ function scrapingErr(msg, req) {
         id: req.id,
         url: req.url,
         uniqueKey: req.uniqueKey,
-        retryCount: req.retryCount
+        retryCount: req.retryCount,
     };
     return err;
 }

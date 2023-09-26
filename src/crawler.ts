@@ -35,11 +35,15 @@ export async function scraping(url: string): Promise<{
       }
 
       if (articleTitle.length === 0) {
-        reject(scrapingErr('not found', request)); return
+        reject(scrapingErr('not found', request))
+        return
       }
 
       function getCheerioText($el: Cheerio<Element>): string {
-        return $el.map((_i, el) => $(el).text().trim()).toArray().join(' ')
+        return $el
+          .map((_i, el) => $(el).text().trim())
+          .toArray()
+          .join(' ')
       }
 
       const doc: Document = {
@@ -48,7 +52,7 @@ export async function scraping(url: string): Promise<{
         title: getCheerioText(articleTitle),
         meta: {},
         html: '',
-        page: $.html()
+        page: $.html(),
       }
 
       $('head > meta').each((_i, el) => {
@@ -57,7 +61,10 @@ export async function scraping(url: string): Promise<{
         if (typeof property === 'string' && typeof content === 'string') {
           if (property === 'og:title') {
             doc.title = content.trim()
-          } else if (property.startsWith('og:') || property.startsWith('article:')) {
+          } else if (
+            property.startsWith('og:') ||
+            property.startsWith('article:')
+          ) {
             doc.meta[property.trim()] = content.trim()
           }
         }
@@ -78,23 +85,27 @@ export async function scraping(url: string): Promise<{
     },
 
     failedRequestHandler: ({ request }) => {
-      const msg = request.errorMessages.map((str) => {
-        let i = str.indexOf('\n')
-        if (i === -1) i = str.length
-        return str.slice(0, i).trim()
-      }).join(', ')
+      const msg = request.errorMessages
+        .map((str) => {
+          let i = str.indexOf('\n')
+          if (i === -1) i = str.length
+          return str.slice(0, i).trim()
+        })
+        .join(', ')
       reject(scrapingErr(msg, request))
-    }
+    },
   })
 
   const rt = await crawler.addRequests([url])
-  crawler.run([]).catch((err) => { reject(err) })
+  crawler.run([]).catch((err) => {
+    reject(err)
+  })
 
   const { requestId, uniqueKey } = rt.addedRequests[0]
   return {
     requestId,
     uniqueKey,
-    result: promise as Promise<Document>
+    result: promise as Promise<Document>,
   }
 }
 
@@ -105,7 +116,7 @@ function scrapingErr(msg: string, req: Request): any {
     id: req.id,
     url: req.url,
     uniqueKey: req.uniqueKey,
-    retryCount: req.retryCount
+    retryCount: req.retryCount,
   }
   return err
 }

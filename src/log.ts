@@ -25,7 +25,11 @@ export enum LogLevel {
   Debug = 'debug',
 }
 
-export function createLog (start: number = Date.now(), level: LogLevel = LogLevel.Info, msg = ''): Log {
+export function createLog(
+  start: number = Date.now(),
+  level: LogLevel = LogLevel.Info,
+  msg = ''
+): Log {
   const log: Log = Object.create(null)
   log.level = level
   log.start = start
@@ -33,7 +37,7 @@ export function createLog (start: number = Date.now(), level: LogLevel = LogLeve
   return log
 }
 
-export function writeLog (log: Log): void {
+export function writeLog(log: Log): void {
   switch (log.level) {
     case LogLevel.Info:
     case LogLevel.Debug:
@@ -44,7 +48,7 @@ export function writeLog (log: Log): void {
   }
 }
 
-export function logError (err: Error): void {
+export function logError(err: Error): void {
   const log = createLog(Date.now(), LogLevel.Error, err.message)
   for (const key of Object.getOwnPropertyNames(err)) {
     log[key] = (err as any)[key]

@@ -6,7 +6,7 @@ export async function connect(keyspace) {
         contactPoints: cfg.contactPoints,
         authProvider: new cassandra.auth.PlainTextAuthProvider(cfg.username, cfg.password),
         localDataCenter: cfg.localDataCenter,
-        keyspace
+        keyspace,
     });
     await db.connect();
     return db;

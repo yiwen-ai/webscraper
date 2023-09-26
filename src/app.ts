@@ -5,7 +5,14 @@ import { encode } from 'cborg'
 
 import { LogLevel, createLog, writeLog } from './log.js'
 import { connect } from './db/scylladb.js'
-import { versionAPI, healthzAPI, scrapingAPI, searchAPI, documentAPI, convertingAPI } from './api.js'
+import {
+  versionAPI,
+  healthzAPI,
+  scrapingAPI,
+  searchAPI,
+  documentAPI,
+  convertingAPI,
+} from './api.js'
 
 const GZIP_MIN_LENGTH = 128
 
@@ -29,7 +36,9 @@ export async function initApp(app: Koa): Promise<void> {
 
 async function initContext(ctx: Koa.Context, next: Koa.Next): Promise<void> {
   const start = Date.now()
-  const acceptCBOR = ctx.get('accept').toLowerCase().includes('cbor') || ctx.get('content-type').toLowerCase().includes('cbor')
+  const acceptCBOR =
+    ctx.get('accept').toLowerCase().includes('cbor') ||
+    ctx.get('content-type').toLowerCase().includes('cbor')
 
   // initialize the log object
   const log = createLog(start)
@@ -69,8 +78,8 @@ async function initContext(ctx: Koa.Context, next: Koa.Next): Promise<void> {
       error: {
         code: err.code,
         message: err.message,
-        data: err.data
-      }
+        data: err.data,
+      },
     }
   } finally {
     // log when the response is finished or closed, whichever happens first.
@@ -106,7 +115,10 @@ async function initContext(ctx: Koa.Context, next: Koa.Next): Promise<void> {
       ctx.set('content-type', 'application/json')
     }
 
-    if (body.length > GZIP_MIN_LENGTH && ctx.acceptsEncodings('gzip') === 'gzip') {
+    if (
+      body.length > GZIP_MIN_LENGTH &&
+      ctx.acceptsEncodings('gzip') === 'gzip'
+    ) {
       log.beforeGzip = body.length
       body = gzipSync(body as Buffer)
       ctx.remove('Content-Length')

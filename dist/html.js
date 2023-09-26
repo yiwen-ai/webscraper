@@ -13,7 +13,7 @@ export function generateHTML(doc, extensions) {
 }
 export function getHTMLFromFragment(doc, schema) {
     const document = DOMSerializer.fromSchema(schema).serializeFragment(doc.content, {
-        document: createHTMLDocument()
+        document: createHTMLDocument(),
     });
     return document.render();
 }
