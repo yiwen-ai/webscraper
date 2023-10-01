@@ -6,13 +6,14 @@ import { encode } from 'cborg'
 import { LogLevel, createLog, writeLog } from './log.js'
 import { connect } from './db/scylladb.js'
 import {
-  versionAPI,
   healthzAPI,
   scrapingAPI,
   searchAPI,
   documentAPI,
   convertingAPI,
 } from './api.js'
+
+import { renderIndex, renderPublication, renderGroup } from './ssr.js'
 
 const GZIP_MIN_LENGTH = 128
 
@@ -23,12 +24,14 @@ export async function initApp(app: Koa): Promise<void> {
   // create routes
   const router = new Router()
   router.use(initContext)
-  router.get('/', versionAPI)
+  router.get('/', renderIndex)
   router.get('/healthz', healthzAPI)
   router.get('/v1/scraping', scrapingAPI)
   router.get('/v1/search', searchAPI)
   router.get('/v1/document', documentAPI)
   router.post('/v1/converting', convertingAPI)
+  router.get('/pub/:id', renderPublication)
+  router.get('/group/:id', renderGroup)
 
   app.use(router.routes())
   app.use(router.allowedMethods())
@@ -126,5 +129,15 @@ async function initContext(ctx: Koa.Context, next: Koa.Next): Promise<void> {
     }
 
     ctx.body = body
+  } else if (typeof body === 'string') {
+    if (
+      body.length > GZIP_MIN_LENGTH &&
+      ctx.acceptsEncodings('gzip') === 'gzip'
+    ) {
+      log.beforeGzip = body.length
+      ctx.body = gzipSync(Buffer.from(body, 'utf-8'))
+      ctx.remove('Content-Length')
+      ctx.set('content-encoding', 'gzip')
+    }
   }
 }

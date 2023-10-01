@@ -9,5 +9,8 @@
     "contactPoints": [
       "127.0.0.1:9042"
     ]
-  }
+  },
+  "siteBase": "http://127.0.0.1:8080",
+  "writingBase": "http://127.0.0.1:8080",
+  "userBase": "http://127.0.0.1:8080"
 }

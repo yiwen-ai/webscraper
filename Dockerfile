@@ -27,6 +27,7 @@ RUN pnpm install --prod \
 # for most source file changes.
 COPY --chown=myuser dist ./dist/
 COPY --chown=myuser config ./config/
+COPY --chown=myuser html ./html/
 
 ENV NODE_ENV=production
 # Run the image.
