@@ -50,6 +50,7 @@ async function initContext(ctx: Koa.Context, next: Koa.Next): Promise<void> {
   log.requestUri = ctx.originalUrl
   log.remoteAddr = ctx.ip
   log.xRequestID = ctx.get('x-request-id')
+  log.userAgent = ctx.get('user-agent')
 
   ctx.state.log = log
 

@@ -262,6 +262,7 @@ async function getPublication(
     'fields',
     'title,updated_at,from_language,authors,content'
   )
+  api.searchParams.append('partial-content', '60') // 读取 60% 的内容
 
   headers.accept = 'application/cbor'
   const res = await fetch(api, {

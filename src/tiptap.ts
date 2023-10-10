@@ -132,6 +132,20 @@ export class JSONDocumentAmender {
 
   // https://prosemirror.net/docs/ref/#model.Document_Structure
   amendNode(node: Node): any {
+    if (!node || node.type === 'invalid') {
+      return
+    }
+
+    if (node.type === 'image' && !node.attrs?.src) {
+      node.type = 'invalid'
+      return node
+    }
+
+    if (node.type === 'paragraph' && !node.content?.length) {
+      node.type = 'invalid'
+      return node
+    }
+
     // attrs: Attrs
     if (uidTypes.includes(node.type) && node.attrs == null) {
       node.attrs = { id: this.amendId('') }
@@ -157,9 +171,21 @@ export class JSONDocumentAmender {
 
     // content: Node[]
     if (node.content != null) {
+      let prevHardBreak = false
       for (const child of node.content) {
+        const isHardBreak =
+          child.type === 'paragraph' &&
+          child.content?.length === 1 &&
+          child.content[0].type === 'hardBreak'
+        if (prevHardBreak && isHardBreak) {
+          // 清理连续的 hardBreak
+          child.type = 'invalid'
+        }
+        prevHardBreak = isHardBreak
         this.amendNode(child)
       }
+
+      node.content = node.content.filter((child) => child.type !== 'invalid')
     }
 
     return node

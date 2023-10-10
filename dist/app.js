@@ -34,6 +34,7 @@ async function initContext(ctx, next) {
     log.requestUri = ctx.originalUrl;
     log.remoteAddr = ctx.ip;
     log.xRequestID = ctx.get('x-request-id');
+    log.userAgent = ctx.get('user-agent');
     ctx.state.log = log;
     try {
         await next();
