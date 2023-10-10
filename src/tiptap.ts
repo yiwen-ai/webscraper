@@ -141,7 +141,11 @@ export class JSONDocumentAmender {
       return node
     }
 
-    if (node.type === 'paragraph' && !node.content?.length) {
+    if (
+      node.type === 'paragraph' &&
+      (!node.content?.length ||
+        (node.content.length == 1 && node.content[0].type === 'hardBreak'))
+    ) {
       node.type = 'invalid'
       return node
     }
@@ -171,17 +175,7 @@ export class JSONDocumentAmender {
 
     // content: Node[]
     if (node.content != null) {
-      let prevHardBreak = false
       for (const child of node.content) {
-        const isHardBreak =
-          child.type === 'paragraph' &&
-          child.content?.length === 1 &&
-          child.content[0].type === 'hardBreak'
-        if (prevHardBreak && isHardBreak) {
-          // 清理连续的 hardBreak
-          child.type = 'invalid'
-        }
-        prevHardBreak = isHardBreak
         this.amendNode(child)
       }
 
