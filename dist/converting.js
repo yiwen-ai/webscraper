@@ -22,13 +22,15 @@ export function getConverter(mime) {
 }
 function convertHtml(buf) {
     const html = buf.toString('utf8');
-    const doc = parseHTML(html);
-    return Promise.resolve(doc);
+    const node = parseHTML(html);
+    const amender = new JSONDocumentAmender();
+    return Promise.resolve(amender.amendNode(node));
 }
 function convertMarkdown(buf) {
     const html = marked.parse(buf.toString('utf8'));
-    const doc = parseHTML(html);
-    return Promise.resolve(doc);
+    const node = parseHTML(html);
+    const amender = new JSONDocumentAmender();
+    return Promise.resolve(amender.amendNode(node));
 }
 async function convertPdf(buf) {
     const doc = await pdfjs.getDocument(new Uint8Array(buf)).promise;
