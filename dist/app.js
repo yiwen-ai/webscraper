@@ -21,6 +21,7 @@ export async function initApp(app) {
     router.get('/pub/:cid', renderPublication);
     router.get('/group/:gid', renderGroup);
     router.get('/group/:gid/collection', renderCollection);
+    router.get('/group/:gid/:other', renderGroup);
     router.all('/:other+', (ctx) => {
         ctx.redirect('/');
         ctx.status = 307;

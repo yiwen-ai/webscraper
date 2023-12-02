@@ -180,8 +180,12 @@ export async function renderCollection(ctx: Context): Promise<void> {
     $('meta[name="description"]').prop('content', siteInfo.desc)
   }
 
+  if (!_cid || Array.isArray(_cid)) {
+    return renderGroup(ctx)
+  }
+
   try {
-    const doc = await getCollection(headers, _cid as string)
+    const doc = await getCollection(headers, _cid)
     const [language, info] = getCollectionInfo(doc, lang) ?? []
     if (!info || !language) {
       throw createError(404, 'collection not found')
@@ -690,25 +694,39 @@ async function listCollections(
   const api = new URL('/v1/collection/list', writingBase)
   headers.accept = 'application/cbor'
   headers['content-type'] = 'application/cbor'
-  const res = await fetch(api, {
-    method: 'POST',
-    headers,
-    body: Buffer.from(
-      encode({
-        gid: gid.toBytes(),
-        status: 2,
-        fields: ['info', 'updated_at'],
-      })
-    ),
-  })
+  const output = new Array<CollectionOutput>()
 
-  if (res.status !== 200) {
-    throw createError(res.status, await res.text())
+  const input = {
+    gid: gid.toBytes(),
+    page_size: 100,
+    status: 2,
+    fields: ['info', 'updated_at'],
+    page_token: undefined,
   }
 
-  const data = await res.arrayBuffer()
-  const obj = decode(Buffer.from(data))
-  return obj.result
+  let i = 7
+  while (i > 0) {
+    i -= 1
+    const res = await fetch(api, {
+      method: 'POST',
+      headers,
+      body: Buffer.from(encode(input)),
+    })
+
+    if (res.status !== 200) {
+      break
+    }
+
+    const data = await res.arrayBuffer()
+    const obj = decode(Buffer.from(data))
+    output.push(...obj.result)
+    if (!obj.next_page_token) {
+      break
+    }
+    input.page_token = obj.next_page_token
+  }
+
+  return output
 }
 
 async function listLatestCollections(
@@ -717,24 +735,38 @@ async function listLatestCollections(
   const api = new URL('/v1/collection/list_latest', writingBase)
   headers.accept = 'application/cbor'
   headers['content-type'] = 'application/cbor'
-  const res = await fetch(api, {
-    method: 'POST',
-    headers,
-    body: Buffer.from(
-      encode({
-        page_size: 100,
-        fields: ['info', 'updated_at'],
-      })
-    ),
-  })
+  const output = new Array<CollectionOutput>()
 
-  if (res.status !== 200) {
-    throw createError(res.status, await res.text())
+  const input = {
+    page_size: 100,
+    fields: ['info', 'updated_at'],
+    page_token: undefined,
   }
 
-  const data = await res.arrayBuffer()
-  const obj = decode(Buffer.from(data))
-  return obj.result
+  let i = 7
+  while (i > 0) {
+    i -= 1
+
+    const res = await fetch(api, {
+      method: 'POST',
+      headers,
+      body: Buffer.from(encode(input)),
+    })
+
+    if (res.status !== 200) {
+      break
+    }
+
+    const data = await res.arrayBuffer()
+    const obj = decode(Buffer.from(data))
+    output.push(...obj.result)
+    if (!obj.next_page_token) {
+      break
+    }
+    input.page_token = obj.next_page_token
+  }
+
+  return output
 }
 
 async function listCollectionChildren(

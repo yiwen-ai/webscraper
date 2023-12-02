@@ -144,6 +144,9 @@ export async function renderCollection(ctx) {
         $('title').text(siteInfo.title);
         $('meta[name="description"]').prop('content', siteInfo.desc);
     }
+    if (!_cid || Array.isArray(_cid)) {
+        return renderGroup(ctx);
+    }
     try {
         const doc = await getCollection(headers, _cid);
         const [language, info] = getCollectionInfo(doc, lang) ?? [];
@@ -453,40 +456,65 @@ async function listCollections(headers, gid) {
     const api = new URL('/v1/collection/list', writingBase);
     headers.accept = 'application/cbor';
     headers['content-type'] = 'application/cbor';
-    const res = await fetch(api, {
-        method: 'POST',
-        headers,
-        body: Buffer.from(encode({
-            gid: gid.toBytes(),
-            status: 2,
-            fields: ['info', 'updated_at'],
-        })),
-    });
-    if (res.status !== 200) {
-        throw createError(res.status, await res.text());
+    const output = new Array();
+    const input = {
+        gid: gid.toBytes(),
+        page_size: 100,
+        status: 2,
+        fields: ['info', 'updated_at'],
+        page_token: undefined,
+    };
+    let i = 7;
+    while (i > 0) {
+        i -= 1;
+        const res = await fetch(api, {
+            method: 'POST',
+            headers,
+            body: Buffer.from(encode(input)),
+        });
+        if (res.status !== 200) {
+            break;
+        }
+        const data = await res.arrayBuffer();
+        const obj = decode(Buffer.from(data));
+        output.push(...obj.result);
+        if (!obj.next_page_token) {
+            break;
+        }
+        input.page_token = obj.next_page_token;
     }
-    const data = await res.arrayBuffer();
-    const obj = decode(Buffer.from(data));
-    return obj.result;
+    return output;
 }
 async function listLatestCollections(headers) {
     const api = new URL('/v1/collection/list_latest', writingBase);
     headers.accept = 'application/cbor';
     headers['content-type'] = 'application/cbor';
-    const res = await fetch(api, {
-        method: 'POST',
-        headers,
-        body: Buffer.from(encode({
-            page_size: 100,
-            fields: ['info', 'updated_at'],
-        })),
-    });
-    if (res.status !== 200) {
-        throw createError(res.status, await res.text());
+    const output = new Array();
+    const input = {
+        page_size: 100,
+        fields: ['info', 'updated_at'],
+        page_token: undefined,
+    };
+    let i = 7;
+    while (i > 0) {
+        i -= 1;
+        const res = await fetch(api, {
+            method: 'POST',
+            headers,
+            body: Buffer.from(encode(input)),
+        });
+        if (res.status !== 200) {
+            break;
+        }
+        const data = await res.arrayBuffer();
+        const obj = decode(Buffer.from(data));
+        output.push(...obj.result);
+        if (!obj.next_page_token) {
+            break;
+        }
+        input.page_token = obj.next_page_token;
     }
-    const data = await res.arrayBuffer();
-    const obj = decode(Buffer.from(data));
-    return obj.result;
+    return output;
 }
 async function listCollectionChildren(headers, id) {
     const api = new URL('/v1/collection/list_children', writingBase);
