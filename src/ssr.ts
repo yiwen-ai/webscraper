@@ -402,7 +402,7 @@ function renderList(
     if (item.summary) {
       const summary = $(`<p title="summary"></p>`)
       summary.text(item.summary)
-      title.appendTo(`#${item.id}`)
+      summary.appendTo(`#${item.id}`)
     }
 
     if (item.authors) {
