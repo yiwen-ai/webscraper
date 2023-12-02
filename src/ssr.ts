@@ -11,8 +11,10 @@ import { lang639_3, isRTL } from './lang.js'
 
 const ZeroID = Xid.default().toString()
 const indexTpl = readFileSync('./html/index.html', 'utf-8')
-const publicationTpl = readFileSync('./html/publication.html', 'utf-8')
 const groupTpl = readFileSync('./html/group.html', 'utf-8')
+const publicationTpl = readFileSync('./html/publication.html', 'utf-8')
+const collectionTpl = readFileSync('./html/collection.html', 'utf-8')
+
 const siteBase = config.get<string>('siteBase')
 const writingBase = config.get<string>('writingBase')
 const userBase = config.get<string>('userBase')
@@ -51,9 +53,9 @@ export async function renderIndex(ctx: Context) {
 
   const $ = cheerio.load(indexTpl)
   const lang = headers['x-language'] ?? 'eng'
-  const info = metaInfos[lang] || metaInfos.eng
-  $('title').text(info.title)
-  $('meta[name="description"]').prop('content', info.desc)
+  const siteInfo = metaInfos[lang] || metaInfos.eng
+  $('title').text(siteInfo.title)
+  $('meta[name="description"]').prop('content', siteInfo.desc)
 
   try {
     await Promise.all([
@@ -82,25 +84,28 @@ export async function renderIndex(ctx: Context) {
 export async function renderPublication(ctx: Context): Promise<void> {
   const headers = ctxHeaders(ctx)
 
-  const cid = ctx.params.id as string
+  const cid = ctx.params.cid as string
   const { gid, language } = ctx.query
   const $ = cheerio.load(publicationTpl)
   const lang = headers['x-language'] ?? 'eng'
-  const info = metaInfos[lang]
-  if (info) {
-    $('title').text(info.title)
-    $('meta[name="description"]').prop('content', info.desc)
+  const siteInfo = metaInfos[lang]
+  if (siteInfo) {
+    $('title').text(siteInfo.title)
+    $('meta[name="description"]').prop('content', siteInfo.desc)
   }
 
   try {
-    const docs = await listPublished(headers, Xid.fromValue(cid))
-    renderPublicationItems($, docs)
-
     const doc = await getPublication(
       headers,
       cid,
       (gid ?? '') as string,
       (language ?? lang) as string
+    )
+
+    const docs = await listPublished(headers, Xid.fromValue(cid))
+    renderPublicationItems(
+      $,
+      docs.filter((item) => item.language !== doc.language)
     )
 
     const docUrl = `${siteBase}/pub/${Xid.fromValue(doc.cid).toString()}`
@@ -110,25 +115,39 @@ export async function renderPublication(ctx: Context): Promise<void> {
       $('html').prop('dir', 'rtl')
     }
 
-    $('meta[property="og:title"]').prop('content', doc.title)
     $('meta[property="og:url"]').prop('content', docUrl)
-
-    $('#title').text(doc.title)
-    const authors = $('#authors')
-    authors.prop('href', groupUrl)
-    authors.text(groupUrl)
-    if (doc.authors != null && doc.authors.length > 0) {
-      authors.text(doc.authors.join(', '))
+    $('meta[property="og:title"]').prop('content', doc.title)
+    if (doc.summary) {
+      $('meta[property="og:description"]').prop('content', doc.summary)
     }
 
+    $('#title').text(doc.title)
+    if (doc.summary) {
+      $('#summary').text(doc.summary)
+    }
+    if (doc.authors) {
+      doc.authors.forEach((author) =>
+        $(`<span>${author}</span>`).appendTo(`#authors`)
+      )
+    }
+    if (doc.keywords) {
+      doc.keywords.forEach((keyword) =>
+        $(`<span>${keyword}</span>`).appendTo(`#keywords`)
+      )
+    }
+
+    const groupInfo = $('#group')
+    groupInfo.prop('href', groupUrl)
+    groupInfo.text(`Group: ${groupUrl}`)
+
     const updated_at = new Date(doc.updated_at).toUTCString()
-    $('#updated_time').text(updated_at)
-    $('#version').text(doc.version.toString())
+    $('#updated_time').text(`Updated: ${updated_at}`)
+    $('#version').text(`Version: ${doc.version}`)
 
     const content = decode(doc.content) as Node
     let contentHtml =
       toHTML(content) +
-      `\n<p><a title="Permalink" href="${docUrl}" target="_blank">${docUrl}</a></p>`
+      `\n<p><a title="Permalink" href="${docUrl}" target="_blank">Permalink: ${docUrl}</a></p>`
     if (doc.rfp?.creation) {
       contentHtml += `\n<p>Request For Payment, Price: ${doc.rfp.creation.price} WEN</p>`
     }
@@ -148,36 +167,116 @@ export async function renderPublication(ctx: Context): Promise<void> {
   ctx.body = $.html()
 }
 
-export async function renderGroup(ctx: Context) {
+export async function renderCollection(ctx: Context): Promise<void> {
   const headers = ctxHeaders(ctx)
 
-  const _gid = ctx.params.id as string
-  const $ = cheerio.load(groupTpl)
+  // const gid = ctx.params.gid as string
+  const { cid: _cid } = ctx.query
+  const $ = cheerio.load(collectionTpl)
   const lang = headers['x-language'] ?? 'eng'
-  const info = metaInfos[lang]
-  if (info) {
-    $('title').text(info.title)
-    $('meta[name="description"]').prop('content', info.desc)
+  const siteInfo = metaInfos[lang]
+  if (siteInfo) {
+    $('title').text(siteInfo.title)
+    $('meta[name="description"]').prop('content', siteInfo.desc)
   }
 
   try {
-    const group = await getGroup(headers, _gid)
-    const gid = Xid.fromValue(group.id)
+    const doc = await getCollection(headers, _cid as string)
+    const [language, info] = getCollectionInfo(doc, lang) ?? []
+    if (!info || !language) {
+      throw createError(404, 'collection not found')
+    }
+
+    const gid = Xid.fromValue(doc.gid)
+    const cid = Xid.fromValue(doc.id)
+
     const groupUrl = `${siteBase}/group/${gid.toString()}`
+    const docUrl = `${groupUrl}?cid=${cid.toString()}`
+    $('html').prop('lang', language)
+    if (isRTL(language)) {
+      $('html').prop('dir', 'rtl')
+    }
+
+    $('meta[property="og:url"]').prop('content', docUrl)
+    $('meta[property="og:title"]').prop('content', info.title)
+    if (info.summary) {
+      $('meta[property="og:description"]').prop('content', info.summary)
+    }
+
+    $('#title').text(info.title)
+    if (info.summary) {
+      $('#summary').text(info.summary)
+    }
+
+    if (info.authors) {
+      info.authors.forEach((author) =>
+        $(`<span>${author}</span>`).appendTo(`#authors`)
+      )
+    }
+    if (info.keywords) {
+      info.keywords.forEach((keyword) =>
+        $(`<span>${keyword}</span>`).appendTo(`#keywords`)
+      )
+    }
+
+    const groupInfo = $('#group')
+    groupInfo.prop('href', groupUrl)
+    groupInfo.text(`Group: ${groupUrl}`)
+
+    const updated_at = new Date(doc.updated_at).toUTCString()
+    $('#updated_time').text(`Updated: ${updated_at}`)
+    ctx.set('last-modified', updated_at)
+
+    try {
+      const docs = await listCollectionChildren(headers, cid)
+      renderCollectionChildrenItems($, docs)
+    } catch (err: any) {
+      ignoreError()
+    }
+  } catch (err: any) {
+    ctx.status = 404
+    const url = ctx.get('x-request-url')
+    if (url !== '') {
+      $('#content').text(url + ' not found')
+    }
+  }
+
+  ctx.vary('Accept-Language')
+  ctx.type = 'text/html'
+  ctx.body = $.html()
+}
+
+export async function renderGroup(ctx: Context) {
+  const headers = ctxHeaders(ctx)
+
+  const gid = ctx.params.gid as string
+  const $ = cheerio.load(groupTpl)
+  const lang = headers['x-language'] ?? 'eng'
+  const siteInfo = metaInfos[lang]
+  if (siteInfo) {
+    $('title').text(siteInfo.title)
+    $('meta[name="description"]').prop('content', siteInfo.desc)
+  }
+
+  try {
+    const group = await getGroup(headers, gid)
+    const xGid = Xid.fromValue(group.id)
+    const groupUrl = `${siteBase}/group/${gid.toString()}`
+
+    $('meta[property="og:url"]').prop('content', groupUrl)
     $('meta[property="og:title"]').prop('content', group.name)
     $('meta[property="og:description"]').prop('content', group.slogan)
-    $('meta[property="og:url"]').prop('content', groupUrl)
 
     $('#group_name').text(group.name)
     $('#group_slogan').text(group.slogan)
 
     await Promise.all([
       (async () => {
-        const docs = await listCollections(headers, gid)
+        const docs = await listCollections(headers, xGid)
         renderCollectionItems($, docs, lang)
       })().catch(ignoreError),
       (async () => {
-        const docs = await listPublications(headers, gid)
+        const docs = await listPublications(headers, xGid)
         renderPublicationItems($, docs)
       })().catch(ignoreError),
     ])
@@ -240,6 +339,33 @@ function renderCollectionItems(
           summary: info.summary ?? '',
           keywords: info.keywords,
           authors: info.authors,
+        }
+      })
+      .filter((item) => !!item) as ListItem[]
+  )
+}
+
+function renderCollectionChildrenItems(
+  $: cheerio.CheerioAPI,
+  docs: CollectionChildrenOutput[]
+): void {
+  renderList(
+    $,
+    'children',
+    docs
+      .map((doc) => {
+        if (doc.kind == 2) return null // collection
+
+        const cid = Xid.fromValue(doc.cid).toString()
+        const gid = Xid.fromValue(doc.gid).toString()
+        return {
+          id: `${gid}-${cid}`,
+          url: `${siteBase}/pub/${cid}?gid=${gid}`,
+          title: doc.title,
+          language: doc.language,
+          summary: doc.summary ?? '',
+          keywords: doc.keywords,
+          authors: doc.authors,
         }
       })
       .filter((item) => !!item) as ListItem[]
@@ -389,6 +515,25 @@ interface CollectionInfo {
   authors?: string[]
 }
 
+interface CollectionChildrenOutput {
+  parent: Uint8Array
+  gid: Uint8Array
+  cid: Uint8Array
+  kind: number
+  ord: number
+  language: string
+  version: number
+  status: number
+  rating?: number
+  price?: number
+  updated_at: number
+  title: string
+  cover?: string
+  keywords?: string[]
+  authors?: string[]
+  summary?: string
+}
+
 async function getPublication(
   headers: Record<string, string>,
   cid: string,
@@ -515,6 +660,29 @@ async function listLatestPublications(
   return obj.result
 }
 
+async function getCollection(
+  headers: Record<string, string>,
+  cid: string
+): Promise<CollectionOutput> {
+  const api = new URL('/v1/collection', writingBase)
+  api.searchParams.append('gid', '000000000000000anon0')
+  api.searchParams.append('id', cid)
+  api.searchParams.append('fields', 'info,updated_at')
+
+  headers.accept = 'application/cbor'
+  const res = await fetch(api, {
+    headers,
+  })
+
+  if (res.status !== 200) {
+    throw createError(res.status, await res.text())
+  }
+
+  const data = await res.arrayBuffer()
+  const obj = decode(Buffer.from(data))
+  return obj.result
+}
+
 async function listCollections(
   headers: Record<string, string>,
   gid: Xid
@@ -556,6 +724,34 @@ async function listLatestCollections(
       encode({
         page_size: 100,
         fields: ['info', 'updated_at'],
+      })
+    ),
+  })
+
+  if (res.status !== 200) {
+    throw createError(res.status, await res.text())
+  }
+
+  const data = await res.arrayBuffer()
+  const obj = decode(Buffer.from(data))
+  return obj.result
+}
+
+async function listCollectionChildren(
+  headers: Record<string, string>,
+  id: Xid
+): Promise<CollectionChildrenOutput[]> {
+  const api = new URL('/v1/collection/list_children', writingBase)
+  headers.accept = 'application/cbor'
+  headers['content-type'] = 'application/cbor'
+  const res = await fetch(api, {
+    method: 'POST',
+    headers,
+    body: Buffer.from(
+      encode({
+        gid: Xid.default().toBytes(),
+        id: id.toBytes(),
+        page_size: 100,
       })
     ),
   })

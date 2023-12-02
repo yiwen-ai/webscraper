@@ -13,7 +13,12 @@ import {
   convertingAPI,
 } from './api.js'
 
-import { renderIndex, renderPublication, renderGroup } from './ssr.js'
+import {
+  renderIndex,
+  renderPublication,
+  renderGroup,
+  renderCollection,
+} from './ssr.js'
 
 const GZIP_MIN_LENGTH = 128
 
@@ -30,8 +35,13 @@ export async function initApp(app: Koa): Promise<void> {
   router.get('/v1/search', searchAPI)
   router.get('/v1/document', documentAPI)
   router.post('/v1/converting', convertingAPI)
-  router.get('/pub/:id', renderPublication)
-  router.get('/group/:id', renderGroup)
+  router.get('/pub/:cid', renderPublication)
+  router.get('/group/:gid', renderGroup)
+  router.get('/group/:gid/collection', renderCollection)
+  router.all('/:other+', (ctx) => {
+    ctx.redirect('/')
+    ctx.status = 307
+  })
 
   app.use(router.routes())
   app.use(router.allowedMethods())
