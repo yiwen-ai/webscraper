@@ -9,6 +9,7 @@ import createError from 'http-errors'
 import { toHTML, type Node } from './tiptap.js'
 import { lang639_3, isRTL } from './lang.js'
 
+const ZeroID = Xid.default().toString()
 const indexTpl = readFileSync('./html/index.html', 'utf-8')
 const publicationTpl = readFileSync('./html/publication.html', 'utf-8')
 const groupTpl = readFileSync('./html/group.html', 'utf-8')
@@ -17,8 +18,31 @@ const writingBase = config.get<string>('writingBase')
 const userBase = config.get<string>('userBase')
 const metaInfos: Record<string, MetaInfo> = {
   zho: {
-    title: '亿文 — 跨语言的知识网络',
-    desc: '亿文是一个多语言知识发布平台，借助 ChatGPT，您可以轻松将精彩文章、文档一键翻译多种语言并分享给全世界读者，让知识没有语言界限。',
+    title: 'Yiwen 亿文 — 基于人工智能的跨语言知识内容平台',
+    desc: '亿文是一个跨语言知识内容平台，借助 GPT 人工智能，您可以轻松将精彩文章、文档一键翻译成多种语言并分享给全世界读者，让知识没有语言界限。',
+  },
+  eng: {
+    title: 'Yiwen — AI-based Translingual Knowledge Content Platform',
+    desc: 'Yiwen is a cross-language knowledge content platform. With the help of GPT artificial intelligence, you can easily translate outstanding articles and documents into multiple languages with one click and share them with readers all over the world, making knowledge free of language barriers.',
+  },
+  fra: {
+    title:
+      "Yiwen — Plateforme de contenu de connaissances translinguistique basée sur l'IA",
+    desc: "Yiwen est une plateforme de contenu de connaissances multilingue. Grâce à l'intelligence artificielle GPT, vous pouvez facilement traduire des articles et documents exceptionnels en plusieurs langues en un seul clic et les partager avec des lecteurs du monde entier, rendant le savoir sans frontières linguistiques.",
+  },
+  rus: {
+    title:
+      'Yiwen — Платформа для контента знаний на основе ИИ с поддержкой многих языков',
+    desc: 'Yiwen - это многоязычная платформа для контента знаний. С помощью искусственного интеллекта GPT вы можете легко переводить выдающиеся статьи и документы на множество языков одним кликом и делиться ими с читателями по всему миру, делая знания свободными от языковых барьеров.',
+  },
+  ara: {
+    title: 'منصة محتوى المعرفة متعددة اللغات بناءً على الذكاء الصنعي — Yiwen',
+    desc: 'يوين هي منصة محتوى المعرفة متعددة اللغات. بمساعدة الذكاء الاصطناعي جي بي تي، يمكنك ترجمة المقالات والوثائق البارزة بسهولة إلى لغات متعددة بنقرة واحدة ومشاركتها مع القراء حول العالم، مما يجعل المعرفة خالية من الحواجز اللغوية.',
+  },
+  spa: {
+    title:
+      'Yiwen — Plataforma de contenido de conocimiento translingüístico basada en IA',
+    desc: 'Yiwen es una plataforma de contenido de conocimiento multilingüe. Con la ayuda de la inteligencia artificial GPT, puedes traducir fácilmente artículos y documentos destacados a múltiples idiomas con un solo clic y compartirlos con lectores de todo el mundo, haciendo que el conocimiento esté libre de barreras idiomáticas.',
   },
 }
 
@@ -26,15 +50,22 @@ export async function renderIndex(ctx: Context) {
   const headers = ctxHeaders(ctx)
 
   const $ = cheerio.load(indexTpl)
-  const info = metaInfos[headers['x-language'] ?? '']
-  if (info) {
-    $('title').text(info.title)
-    $('meta[name="description"]').prop('content', info.desc)
-  }
+  const lang = headers['x-language'] ?? 'eng'
+  const info = metaInfos[lang] || metaInfos.eng
+  $('title').text(info.title)
+  $('meta[name="description"]').prop('content', info.desc)
 
   try {
-    const docs = await listIndex(headers)
-    renderUL($, docs, headers['x-language'] ?? '')
+    await Promise.all([
+      (async () => {
+        const docs = await listLatestCollections(headers)
+        renderCollectionItems($, docs, lang)
+      })().catch(ignoreError),
+      (async () => {
+        const docs = await listLatestPublications(headers)
+        renderPublicationItems($, docs)
+      })().catch(ignoreError),
+    ])
   } catch (err: any) {
     ctx.status = 404
     const url = ctx.get('x-request-url')
@@ -54,7 +85,8 @@ export async function renderPublication(ctx: Context): Promise<void> {
   const cid = ctx.params.id as string
   const { gid, language } = ctx.query
   const $ = cheerio.load(publicationTpl)
-  const info = metaInfos[headers['x-language'] ?? '']
+  const lang = headers['x-language'] ?? 'eng'
+  const info = metaInfos[lang]
   if (info) {
     $('title').text(info.title)
     $('meta[name="description"]').prop('content', info.desc)
@@ -62,13 +94,13 @@ export async function renderPublication(ctx: Context): Promise<void> {
 
   try {
     const docs = await listPublished(headers, Xid.fromValue(cid))
-    renderUL($, docs, '')
+    renderPublicationItems($, docs)
 
     const doc = await getPublication(
       headers,
       cid,
       (gid ?? '') as string,
-      (language ?? '') as string
+      (language ?? lang) as string
     )
 
     const docUrl = `${siteBase}/pub/${Xid.fromValue(doc.cid).toString()}`
@@ -94,10 +126,13 @@ export async function renderPublication(ctx: Context): Promise<void> {
     $('#version').text(doc.version.toString())
 
     const content = decode(doc.content) as Node
-    $('#content').html(
+    let contentHtml =
       toHTML(content) +
-        `\n<p><a title="Permanently Link" href="${docUrl}" target="_blank">${docUrl}</a></p>`
-    )
+      `\n<p><a title="Permalink" href="${docUrl}" target="_blank">${docUrl}</a></p>`
+    if (doc.rfp?.creation) {
+      contentHtml += `\n<p>Request For Payment, Price: ${doc.rfp.creation.price} WEN</p>`
+    }
+    $('#content').html(contentHtml)
 
     ctx.set('last-modified', updated_at)
   } catch (err: any) {
@@ -116,17 +151,19 @@ export async function renderPublication(ctx: Context): Promise<void> {
 export async function renderGroup(ctx: Context) {
   const headers = ctxHeaders(ctx)
 
-  const gid = ctx.params.id as string
+  const _gid = ctx.params.id as string
   const $ = cheerio.load(groupTpl)
-  const info = metaInfos[headers['x-language'] ?? '']
+  const lang = headers['x-language'] ?? 'eng'
+  const info = metaInfos[lang]
   if (info) {
     $('title').text(info.title)
     $('meta[name="description"]').prop('content', info.desc)
   }
 
   try {
-    const group = await getGroup(headers, gid)
-    const groupUrl = `${siteBase}/group/${Xid.fromValue(group.id).toString()}`
+    const group = await getGroup(headers, _gid)
+    const gid = Xid.fromValue(group.id)
+    const groupUrl = `${siteBase}/group/${gid.toString()}`
     $('meta[property="og:title"]').prop('content', group.name)
     $('meta[property="og:description"]').prop('content', group.slogan)
     $('meta[property="og:url"]').prop('content', groupUrl)
@@ -134,8 +171,16 @@ export async function renderGroup(ctx: Context) {
     $('#group_name').text(group.name)
     $('#group_slogan').text(group.slogan)
 
-    const docs = await listPublications(headers, Xid.fromValue(group.id))
-    renderUL($, docs, headers['x-language'] ?? '')
+    await Promise.all([
+      (async () => {
+        const docs = await listCollections(headers, gid)
+        renderCollectionItems($, docs, lang)
+      })().catch(ignoreError),
+      (async () => {
+        const docs = await listPublications(headers, gid)
+        renderPublicationItems($, docs)
+      })().catch(ignoreError),
+    ])
   } catch (err: any) {
     ctx.status = 404
     const url = ctx.get('x-request-url')
@@ -149,40 +194,103 @@ export async function renderGroup(ctx: Context) {
   ctx.body = $.html()
 }
 
-function renderUL(
+function renderPublicationItems(
   $: cheerio.CheerioAPI,
-  docs: PublicationOutput[],
-  perferLang: string
+  docs: PublicationOutput[]
 ): void {
-  const docSet = new Set<string>()
-  const ul = $('#publications')
-  for (const doc of docs) {
-    const cid = Xid.fromValue(doc.cid).toString()
-    const gid = Xid.fromValue(doc.gid).toString()
-    const docUrl = `${siteBase}/pub/${cid}?gid=${gid}`
-    const idKey = perferLang ? cid : `${cid}-${doc.language}`
-    if (docSet.has(idKey)) {
-      const el = $(`#${idKey}`)
-      if (
-        perferLang &&
-        (doc.language === perferLang ||
-          (doc.language === doc.from_language &&
-            el.prop('lang') !== perferLang))
-      ) {
-        el.text(doc.title)
-        el.prop('lang', doc.language)
-        el.prop('href', docUrl)
+  renderList(
+    $,
+    'publications',
+    docs.map((doc) => {
+      const cid = Xid.fromValue(doc.cid).toString()
+      const gid = Xid.fromValue(doc.gid).toString()
+      return {
+        id: `${gid}-${cid}`,
+        url: `${siteBase}/pub/${cid}?gid=${gid}`,
+        title: doc.title,
+        language: doc.language,
+        summary: doc.summary ?? '',
+        keywords: doc.keywords,
+        authors: doc.authors,
       }
-      continue
+    })
+  )
+}
+
+function renderCollectionItems(
+  $: cheerio.CheerioAPI,
+  docs: CollectionOutput[],
+  lang: string
+): void {
+  renderList(
+    $,
+    'collections',
+    docs
+      .map((doc) => {
+        const [language, info] = getCollectionInfo(doc, lang) ?? []
+        if (!info) return null
+
+        const cid = Xid.fromValue(doc.id).toString()
+        const gid = Xid.fromValue(doc.gid).toString()
+        return {
+          id: `${gid}-${cid}`,
+          url: `${siteBase}/group/${gid}/collection?cid=${cid}`,
+          title: info.title,
+          language: language,
+          summary: info.summary ?? '',
+          keywords: info.keywords,
+          authors: info.authors,
+        }
+      })
+      .filter((item) => !!item) as ListItem[]
+  )
+}
+
+interface ListItem {
+  id: string
+  url: string
+  title: string
+  summary: string
+  language: string
+  keywords?: string[]
+  authors?: string[]
+}
+
+function renderList(
+  $: cheerio.CheerioAPI,
+  ulId: string,
+  items: ListItem[]
+): void {
+  const ul = $('#' + ulId)
+  for (const item of items) {
+    $(`<li lang="${item.language}" id="${item.id}"></li>`).appendTo(ul)
+    const title = $(`<a href="${item.url}"></a>`)
+    title.attr('title', item.title)
+    title.text(item.title)
+    title.appendTo(`#${item.id}`)
+
+    if (item.summary) {
+      const summary = $(`<p title="summary"></p>`)
+      summary.text(item.summary)
+      title.appendTo(`#${item.id}`)
     }
 
-    docSet.add(idKey)
-    ul.append(
-      `<li><a lang="${doc.language}" id="${idKey}" href="${docUrl}"></a></li>`
-    )
-    $(`#${idKey}`).text(doc.title)
+    if (item.authors) {
+      const authors = item.authors
+        .map((author) => `<span>${author}</span>`)
+        .join('')
+      $(`<div title="authors">${authors}</div>`).appendTo(`#${item.id}`)
+    }
+    if (item.keywords) {
+      const keywords = item.keywords
+        .map((key) => `<span>${key}</span>`)
+        .join('')
+      $(`<div title="keywords">${keywords}</div>`).appendTo(`#${item.id}`)
+    }
   }
 }
+
+// --------- API ---------
 
 interface MetaInfo {
   title: string
@@ -225,13 +333,25 @@ async function getGroup(
   return obj.result
 }
 
+interface RFPInfo {
+  id: Uint8Array
+  price: number
+}
+
+// Request for Payment
+interface RFP {
+  creation?: RFPInfo
+  collection?: RFPInfo
+}
+
 interface PublicationOutput {
   gid: Uint8Array
   cid: Uint8Array
   language: string
   version: number
-  rating?: number
   status: number
+  rating?: number
+  price?: number
   created_at: number
   updated_at: number
   model: string
@@ -239,9 +359,34 @@ interface PublicationOutput {
   from_language?: string
   title: string
   cover?: string
+  keywords?: string[]
   authors?: string[]
   summary?: string
   content: Uint8Array
+  rfp?: RFP
+}
+
+interface CollectionOutput {
+  gid: Uint8Array
+  id: Uint8Array
+  rating?: number
+  status: number
+  updated_at: number
+  language: string
+  languages: string[]
+  price: number
+  creation_price: number
+  cover?: string
+  info?: CollectionInfo
+  i18n_info?: Record<string, CollectionInfo>
+  rfp?: RFP
+}
+
+interface CollectionInfo {
+  title: string
+  summary: string
+  keywords?: string[]
+  authors?: string[]
 }
 
 async function getPublication(
@@ -260,9 +405,9 @@ async function getPublication(
   }
   api.searchParams.append(
     'fields',
-    'title,updated_at,from_language,authors,content'
+    'title,summary,updated_at,from_language,authors,content'
   )
-  api.searchParams.append('partial-content', '60') // 读取 60% 的内容
+  api.searchParams.append('subscription_in', ZeroID)
 
   headers.accept = 'application/cbor'
   const res = await fetch(api, {
@@ -292,7 +437,14 @@ async function listPublications(
       encode({
         gid: gid.toBytes(),
         status: 2,
-        fields: ['title', 'updated_at', 'from_language'],
+        fields: [
+          'title',
+          'summary',
+          'keywords',
+          'authors',
+          'updated_at',
+          'from_language',
+        ],
       })
     ),
   })
@@ -330,14 +482,28 @@ async function listPublished(
   return obj.result
 }
 
-async function listIndex(
+async function listLatestPublications(
   headers: Record<string, string>
 ): Promise<PublicationOutput[]> {
-  const api = new URL('/v1/search?q=', writingBase)
+  const api = new URL('/v1/publication/list_latest', writingBase)
   headers.accept = 'application/cbor'
   headers['content-type'] = 'application/cbor'
   const res = await fetch(api, {
+    method: 'POST',
     headers,
+    body: Buffer.from(
+      encode({
+        page_size: 100,
+        fields: [
+          'title',
+          'summary',
+          'keywords',
+          'authors',
+          'updated_at',
+          'from_language',
+        ],
+      })
+    ),
   })
 
   if (res.status !== 200) {
@@ -346,7 +512,61 @@ async function listIndex(
 
   const data = await res.arrayBuffer()
   const obj = decode(Buffer.from(data))
-  return obj.result.hits
+  return obj.result
+}
+
+async function listCollections(
+  headers: Record<string, string>,
+  gid: Xid
+): Promise<CollectionOutput[]> {
+  const api = new URL('/v1/collection/list', writingBase)
+  headers.accept = 'application/cbor'
+  headers['content-type'] = 'application/cbor'
+  const res = await fetch(api, {
+    method: 'POST',
+    headers,
+    body: Buffer.from(
+      encode({
+        gid: gid.toBytes(),
+        status: 2,
+        fields: ['info', 'updated_at'],
+      })
+    ),
+  })
+
+  if (res.status !== 200) {
+    throw createError(res.status, await res.text())
+  }
+
+  const data = await res.arrayBuffer()
+  const obj = decode(Buffer.from(data))
+  return obj.result
+}
+
+async function listLatestCollections(
+  headers: Record<string, string>
+): Promise<CollectionOutput[]> {
+  const api = new URL('/v1/collection/list_latest', writingBase)
+  headers.accept = 'application/cbor'
+  headers['content-type'] = 'application/cbor'
+  const res = await fetch(api, {
+    method: 'POST',
+    headers,
+    body: Buffer.from(
+      encode({
+        page_size: 100,
+        fields: ['info', 'updated_at'],
+      })
+    ),
+  })
+
+  if (res.status !== 200) {
+    throw createError(res.status, await res.text())
+  }
+
+  const data = await res.arrayBuffer()
+  const obj = decode(Buffer.from(data))
+  return obj.result
 }
 
 function isXid(id: string): boolean {
@@ -355,6 +575,22 @@ function isXid(id: string): boolean {
     return true
   } catch (e) {}
   return false
+}
+
+function getCollectionInfo(
+  item: CollectionOutput,
+  language: string
+): [string, CollectionInfo] | undefined {
+  let info = item.i18n_info?.[language]
+  if (info) {
+    return [language, info]
+  }
+  info = item.info
+  if (info) {
+    return [language, info]
+  }
+
+  return undefined
 }
 
 function ctxHeaders(ctx: Context): Record<string, string> {
@@ -382,6 +618,10 @@ function ctxHeaders(ctx: Context): Record<string, string> {
     }
   }
 
-  ctxheaders['x-language'] = lang639_3(lang)
+  ctxheaders['x-language'] = lang639_3(lang) || 'eng'
   return ctxheaders
+}
+
+function ignoreError() {
+  // console.error(err)
 }

@@ -55,7 +55,7 @@ export async function scrapingAPI(ctx) {
     if (doc.isFresh) {
         // a fresh document is a document that has been scraped within the last 3600 seconds
         ctx.body = {
-            retry: 0,
+            retry: 0, // client can get the document after 0 seconds
             result: doc.toJSON(),
         };
         return;
@@ -64,7 +64,7 @@ export async function scrapingAPI(ctx) {
     if (!acquired) {
         // fail to get the document scraping lock, it's being scraped by another process
         ctx.body = {
-            retry: 1,
+            retry: 1, // client can get the document after 0 seconds
             result: {
                 id: doc.row.id,
                 url: doc.row.url,
@@ -102,7 +102,7 @@ export async function scrapingAPI(ctx) {
         logError(err);
     });
     ctx.body = {
-        retry: 2,
+        retry: 2, // client can get the document after 2 seconds
         result: {
             id: doc.row.id,
             url: doc.row.url,

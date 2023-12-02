@@ -12,13 +12,13 @@ export function lang639_3(lang) {
     return '';
 }
 const rtlLanguageCodeList3 = [
-    'ara',
-    'heb',
-    'fas',
-    'urd',
-    'kas',
-    'pus',
-    'uig',
+    'ara', // Arabic
+    'heb', // Hebrew
+    'fas', // Persian
+    'urd', // Urdu
+    'kas', // Kashmiri
+    'pus', // Pashto
+    'uig', // Uighur
     'snd', // Sindhi
 ];
 export function isRTL(languageCode) {

@@ -20,6 +20,7 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import { Typography } from '@tiptap/extension-typography'
 import { Underline } from '@tiptap/extension-underline'
 import { Youtube } from '@tiptap/extension-youtube'
+import { type Extensions } from '@tiptap/core'
 
 import { Details } from '@tiptap-pro/extension-details'
 import { DetailsSummary } from '@tiptap-pro/extension-details-summary'
@@ -187,13 +188,13 @@ export class JSONDocumentAmender {
 }
 
 export function parseHTML(html: string): Node {
-  const jsonDoc = generateJSON(html, tiptapExtensions)
+  const jsonDoc = generateJSON(html, tiptapExtensions as Extensions)
   const amender = new JSONDocumentAmender()
   return amender.amendNode(jsonDoc as Node)
 }
 
 export function toHTML(doc: Node): string {
-  return generateHTML(doc, tiptapExtensions)
+  return generateHTML(doc, tiptapExtensions as Extensions)
 }
 
 export function findTitle(doc: Node, level: number): string {
