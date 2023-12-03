@@ -117,8 +117,13 @@ export async function renderPublication(ctx: Context): Promise<void> {
 
     $('meta[property="og:url"]').prop('content', docUrl)
     $('meta[property="og:title"]').prop('content', doc.title)
+    $('title').text('Yiwen — ' + doc.title)
     if (doc.summary) {
       $('meta[property="og:description"]').prop('content', doc.summary)
+      $('meta[name="description"]').prop('content', doc.summary)
+    }
+    if (doc.cover) {
+      $('meta[property="og:image"]').prop('content', doc.cover)
     }
 
     $('#title').text(doc.title)
@@ -203,8 +208,13 @@ export async function renderCollection(ctx: Context): Promise<void> {
 
     $('meta[property="og:url"]').prop('content', docUrl)
     $('meta[property="og:title"]').prop('content', info.title)
+    $('title').text('Yiwen — ' + info.title)
     if (info.summary) {
       $('meta[property="og:description"]').prop('content', info.summary)
+      $('meta[name="description"]').prop('content', info.summary)
+    }
+    if (doc.cover) {
+      $('meta[property="og:image"]').prop('content', doc.cover)
     }
 
     $('#title').text(info.title)
@@ -270,6 +280,10 @@ export async function renderGroup(ctx: Context) {
     $('meta[property="og:url"]').prop('content', groupUrl)
     $('meta[property="og:title"]').prop('content', group.name)
     $('meta[property="og:description"]').prop('content', group.slogan)
+    $('meta[property="og:image"]').prop('content', group.logo)
+
+    $('title').text('Yiwen — ' + group.name)
+    $('meta[name="description"]').prop('content', group.slogan)
 
     $('#group_name').text(group.name)
     $('#group_slogan').text(group.slogan)
